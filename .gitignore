@@ -1,0 +1,15 @@
+# Secrets et données d'une installation locale
+.env
+config/
+data/
+logs/
+
+# Systèmes et éditeurs
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Plus tard (panel)
+node_modules/
+dist/

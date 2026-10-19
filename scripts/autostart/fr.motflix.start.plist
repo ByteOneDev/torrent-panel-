@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Motflix — démarrage automatique sur macOS, à l'ouverture de session (installé par install.sh). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>fr.motflix.start</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>@INSTALL_DIR@/start.sh</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>WorkingDirectory</key>
+  <string>@INSTALL_DIR@</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>@HOME@/.docker/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>@INSTALL_DIR@/logs/start.log</string>
+  <key>StandardErrorPath</key>
+  <string>@INSTALL_DIR@/logs/start.log</string>
+</dict>
+</plist>

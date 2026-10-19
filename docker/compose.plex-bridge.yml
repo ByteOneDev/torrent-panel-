@@ -1,0 +1,8 @@
+# Plex sur macOS : Docker tourne dans une VM, le réseau hôte n'est pas joignable.
+# On publie le port principal de Plex à la place.
+services:
+  plex:
+    networks: [motflix]
+    ports:
+      - 32400:32400
+

@@ -1,0 +1,1387 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motflix — Maquette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root, [data-theme="dark"] {
+  --bg: #0c0f15;
+  --surface: #131820;
+  --surface-2: #19202a;
+  --surface-3: #212a37;
+  --border: #242c3a;
+  --border-strong: #313b4e;
+  --text: #e9edf4;
+  --text-2: #a4aec0;
+  --text-3: #6e7a90;
+  --accent: #7c6cff;
+  --accent-hover: #8f81ff;
+  --accent-soft: rgba(124, 108, 255, .15);
+  --on-accent: #fff;
+  --ok: #34c98a;
+  --ok-soft: rgba(52, 201, 138, .14);
+  --warn: #f2b545;
+  --warn-soft: rgba(242, 181, 69, .14);
+  --err: #f0585e;
+  --err-soft: rgba(240, 88, 94, .14);
+  --shadow: 0 10px 30px rgba(0, 0, 0, .3);
+  --console-bg: #0a0d12;
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --surface-3: #edf0f6;
+  --border: #e2e6ee;
+  --border-strong: #cfd6e2;
+  --text: #121823;
+  --text-2: #4f5a6d;
+  --text-3: #8690a3;
+  --accent: #5d4bf0;
+  --accent-hover: #4c39e6;
+  --accent-soft: rgba(93, 75, 240, .1);
+  --ok: #1a9f68;
+  --ok-soft: rgba(26, 159, 104, .12);
+  --warn: #c98710;
+  --warn-soft: rgba(201, 135, 16, .12);
+  --err: #d93b42;
+  --err-soft: rgba(217, 59, 66, .1);
+  --shadow: 0 10px 30px rgba(20, 30, 50, .08);
+  --console-bg: #0d1117;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic-sm { width: 15px; height: 15px; }
+.mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+.muted { color: var(--text-2); }
+.dim { color: var(--text-3); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Layout ---------- */
+.app { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh;
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; padding: 18px 14px; gap: 18px;
+}
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 8px; }
+.brand-logo {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #c06bff);
+  display: grid; place-items: center; color: #fff;
+}
+.brand-logo .ic { width: 18px; height: 18px; fill: #fff; stroke: none; }
+.brand-name { font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+.server-pill {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px;
+}
+.server-pill b { display: block; font-size: 13px; font-weight: 600; }
+.server-pill span { font-size: 12px; color: var(--text-3); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px var(--ok-soft); flex: none; }
+.dot.warn { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
+.dot.err { background: var(--err); box-shadow: 0 0 0 4px var(--err-soft); }
+.dot.off { background: var(--text-3); box-shadow: none; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
+.nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); padding: 14px 10px 6px; font-weight: 600; }
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 10px; border-radius: 10px; border: 0; background: none;
+  color: var(--text-2); text-align: left; width: 100%; font-weight: 500;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: var(--accent-soft); color: var(--text); }
+.nav-item.active .ic { color: var(--accent); }
+.nav-item .count { margin-left: auto; font-size: 11px; background: var(--surface-3); color: var(--text-2); padding: 1px 7px; border-radius: 99px; }
+.nav-item.active .count { background: var(--accent); color: var(--on-accent); }
+
+.sidebar-foot { display: flex; align-items: center; gap: 10px; padding: 10px 8px 0; border-top: 1px solid var(--border); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+.sidebar-foot b { display: block; font-size: 13px; }
+.sidebar-foot span { font-size: 12px; color: var(--text-3); }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 28px; background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; }
+.search {
+  flex: 1; max-width: 460px; margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px;
+}
+.search input { border: 0; background: none; outline: none; width: 100%; }
+.search kbd { font: 11px Inter; color: var(--text-3); border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 5px; }
+.icon-btn {
+  width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+}
+.icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.menu-btn { display: none; }
+
+.content { padding: 26px 28px 60px; max-width: 1320px; width: 100%; }
+.view { display: none; }
+.view.active { display: block; animation: fade .2s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Composants ---------- */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.card-pad { padding: 20px; }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.card-head h2, .card-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.card-head .right { margin-left: auto; }
+.section-title { display: flex; align-items: center; gap: 10px; margin: 30px 0 14px; }
+.section-title h2 { font-size: 16px; margin: 0; font-weight: 600; }
+.section-title .right { margin-left: auto; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border-strong);
+  background: var(--surface-2); color: var(--text); font-weight: 500; font-size: 13px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--text-3); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-ghost { background: none; border-color: transparent; color: var(--text-2); }
+.btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+.btn-ok { color: var(--ok); }
+.btn-warn { color: var(--warn); }
+.btn-err { color: var(--err); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 550; padding: 3px 9px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); white-space: nowrap; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.err { background: var(--err-soft); color: var(--err); }
+.badge.accent { background: var(--accent-soft); color: var(--accent); }
+[data-theme="light"] .badge.accent { color: var(--accent); }
+
+.bar { height: 6px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .6s ease; }
+.bar.ok > i { background: var(--ok); }
+
+.grid { display: grid; gap: 16px; }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-main { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+
+/* ---------- Tableau de bord ---------- */
+.stat { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+.stat-top { display: flex; align-items: center; gap: 10px; color: var(--text-2); font-size: 13px; font-weight: 500; }
+.stat-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.stat-icon.ok { background: var(--ok-soft); color: var(--ok); }
+.stat-icon.warn { background: var(--warn-soft); color: var(--warn); }
+.stat-value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+.stat-sub { font-size: 12.5px; color: var(--text-3); }
+
+.svc { padding: 16px; display: flex; flex-direction: column; gap: 14px; transition: border-color .15s; }
+.svc:hover { border-color: var(--border-strong); }
+.svc-head { display: flex; align-items: center; gap: 12px; }
+.svc-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-3); color: var(--text); }
+.svc-name b { display: block; font-size: 14px; font-weight: 600; }
+.svc-name span { font-size: 12px; color: var(--text-3); }
+.svc-head .badge { margin-left: auto; }
+.svc-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.svc-metric { font-size: 12px; color: var(--text-3); }
+.svc-metric b { display: block; font-size: 13px; color: var(--text); font-weight: 600; margin-bottom: 4px; }
+.svc-actions { display: flex; gap: 6px; }
+.svc-actions .btn { padding: 6px 10px; font-size: 12px; }
+.svc-actions .btn:last-child { margin-left: auto; }
+
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: 0; }
+.row-main { min-width: 0; flex: 1; }
+.row-main b { display: block; font-weight: 550; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-main span { font-size: 12px; color: var(--text-3); }
+.type-ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--surface-3); color: var(--text-2); flex: none; }
+.timeline-time { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+
+/* ---------- Services / console ---------- */
+.svc-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; align-items: start; }
+.svc-list { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.svc-list button { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; background: none; border-radius: 10px; text-align: left; color: var(--text-2); }
+.svc-list button:hover { background: var(--surface-2); color: var(--text); }
+.svc-list button.active { background: var(--accent-soft); color: var(--text); }
+.svc-list button small { margin-left: auto; font-size: 11px; color: var(--text-3); }
+.svc-detail-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 20px; }
+.svc-detail-head h2 { margin: 0; font-size: 18px; }
+.svc-detail-head .actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.spark-card { padding: 16px 20px; }
+.spark-card .lbl { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; }
+.spark-card .lbl b { color: var(--text); font-size: 18px; font-weight: 700; }
+.spark { width: 100%; height: 56px; display: block; }
+.console {
+  background: var(--console-bg); border-radius: 0 0 16px 16px; padding: 14px 16px;
+  height: 340px; overflow-y: auto; font: 12.5px/1.75 "JetBrains Mono", ui-monospace, Menlo, monospace; color: #c7d0dd;
+}
+.console .t { color: #5d6a7f; }
+.console .i { color: #6aa8ff; }
+.console .w { color: #f2b545; }
+.console .e { color: #f0585e; }
+.console-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+.console-bar input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; outline: none; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--border-strong); background: none; color: var(--text-2); border-radius: 99px; padding: 4px 12px; font-size: 12.5px; font-weight: 500; }
+.chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+/* ---------- Bibliothèque ---------- */
+.lib-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.lib-toolbar .right { margin-left: auto; display: flex; gap: 8px; }
+.posters { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; }
+.poster { cursor: pointer; }
+.poster-art {
+  aspect-ratio: 2 / 3; border-radius: 12px; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; padding: 14px; color: #fff;
+  box-shadow: var(--shadow); transition: transform .2s ease;
+}
+.poster:hover .poster-art { transform: translateY(-3px); }
+.poster-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 45%, rgba(0,0,0,.65)); }
+.poster-art strong { position: relative; z-index: 1; font-size: 19px; line-height: 1.1; font-weight: 700; letter-spacing: -.01em; text-shadow: 0 2px 10px rgba(0,0,0,.4); }
+.poster-art .badge { position: absolute; top: 10px; left: 10px; z-index: 1; background: rgba(0,0,0,.55); color: #fff; backdrop-filter: blur(6px); }
+.poster-art .badge.ok { background: rgba(26,159,104,.85); }
+.poster-art .badge.warn { background: rgba(201,135,16,.9); }
+.poster-art .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.2); z-index: 2; }
+.poster-art .prog i { display: block; height: 100%; background: var(--accent); }
+.poster-meta { padding: 9px 2px 0; }
+.poster-meta b { display: block; font-size: 13.5px; font-weight: 600; }
+.poster-meta span { font-size: 12px; color: var(--text-3); }
+.poster-add { aspect-ratio: 2 / 3; border-radius: 12px; border: 1.5px dashed var(--border-strong); display: grid; place-items: center; text-align: center; color: var(--text-3); gap: 8px; background: none; width: 100%; }
+.poster-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---------- Téléchargements ---------- */
+.dl-head { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; padding: 18px 20px; }
+.speed { display: flex; align-items: center; gap: 8px; }
+.speed b { font-size: 20px; font-weight: 700; }
+.speed .ic { color: var(--accent); }
+.speed.up .ic { color: var(--ok); }
+.dl-head .right { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; padding: 10px 20px; border-bottom: 1px solid var(--border); }
+td { padding: 14px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td .title-cell { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+td .title-cell b { display: block; font-weight: 550; }
+td .title-cell span { font-size: 12px; color: var(--text-3); }
+.prog-cell { min-width: 160px; }
+.prog-cell .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+.table-wrap { overflow-x: auto; }
+
+/* ---------- Réglages ---------- */
+.settings { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 24px; align-items: start; }
+.settings-nav { position: sticky; top: 88px; display: flex; flex-direction: column; gap: 2px; }
+.settings-nav button { display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 10px; color: var(--text-2); font-weight: 500; }
+.settings-nav button:hover { background: var(--surface); color: var(--text); }
+.settings-nav button.active { background: var(--surface); color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+.spanel { display: none; flex-direction: column; gap: 18px; }
+.spanel.active { display: flex; animation: fade .2s ease; }
+.spanel > header h2 { margin: 0 0 4px; font-size: 20px; }
+.spanel > header p { margin: 0; color: var(--text-2); }
+.applies { display: inline-flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+.setting { display: flex; gap: 24px; padding: 18px 20px; border-bottom: 1px solid var(--border); align-items: center; }
+.setting:last-child { border-bottom: 0; }
+.setting .txt { flex: 1; min-width: 0; }
+.setting .txt b { display: block; font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.setting .txt p { margin: 0; color: var(--text-3); font-size: 13px; }
+.setting .ctl { flex: none; display: flex; align-items: center; gap: 10px; }
+.setting.col { flex-direction: column; align-items: stretch; gap: 14px; }
+
+.toggle { position: relative; width: 42px; height: 24px; flex: none; }
+.toggle input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; z-index: 1; }
+.toggle span { position: absolute; inset: 0; background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 99px; transition: .2s; }
+.toggle span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.toggle input:checked + span { background: var(--accent); border-color: var(--accent); }
+.toggle input:checked + span::after { transform: translateX(18px); }
+.toggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px; padding: 3px; }
+.seg button { border: 0; background: none; padding: 6px 16px; border-radius: 8px; color: var(--text-2); font-weight: 550; font-size: 13px; }
+.seg button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+[data-theme="dark"] .seg button.active { background: var(--surface-3); }
+
+.lang-list { display: flex; flex-direction: column; gap: 8px; }
+.lang-item {
+  display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 10px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+  transition: transform .18s ease, border-color .15s;
+}
+.lang-item.moved { border-color: var(--accent); }
+.lang-rank { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px; }
+.lang-item:first-child .lang-rank { background: var(--accent); color: var(--on-accent); }
+.lang-item .grip { color: var(--text-3); }
+.lang-item .txt b { font-weight: 600; }
+.lang-item .txt span { display: block; font-size: 12px; color: var(--text-3); }
+.lang-item .arrows { margin-left: auto; display: flex; gap: 4px; }
+.lang-item .arrows button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: grid; place-items: center; }
+.lang-item .arrows button:hover:not(:disabled) { color: var(--text); border-color: var(--border-strong); }
+.lang-item .arrows button:disabled { opacity: .3; cursor: default; }
+
+.range-row { display: flex; align-items: center; gap: 16px; }
+.range-row input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; }
+.range-val { min-width: 76px; text-align: right; font-weight: 700; font-size: 16px; }
+.hint { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text-2); background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; }
+.hint .ic { color: var(--accent); margin-top: 1px; }
+.hint.ok { background: var(--ok-soft); }
+.hint.ok .ic { color: var(--ok); }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.input, select.input {
+  background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: 10px;
+  padding: 9px 12px; outline: none; width: 100%; min-width: 0;
+}
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.input-unit { display: flex; align-items: center; gap: 8px; }
+.input-unit .input { width: 110px; }
+
+.choice-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.choice {
+  position: relative; text-align: left; border: 1.5px solid var(--border-strong); background: var(--surface-2);
+  border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 6px; color: var(--text);
+}
+.choice b { font-size: 15px; }
+.choice span { color: var(--text-3); font-size: 13px; }
+.choice.active { border-color: var(--accent); background: var(--accent-soft); }
+.choice.active::after { content: ""; position: absolute; top: 14px; right: 14px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-8'/%3E%3C/svg%3E") center/12px no-repeat; }
+.choice:disabled { opacity: .5; cursor: not-allowed; }
+.choice .badge { align-self: flex-start; }
+
+.roles-table td, .roles-table th { padding: 12px 16px; }
+.roles-table td:not(:first-child), .roles-table th:not(:first-child) { text-align: center; }
+.roles-table input { accent-color: var(--accent); width: 16px; height: 16px; }
+.locked { opacity: .45; pointer-events: none; }
+
+.savebar {
+  position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 140%);
+  display: flex; align-items: center; gap: 14px; z-index: 60;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px;
+  padding: 10px 10px 10px 18px; box-shadow: var(--shadow); transition: transform .25s ease;
+  max-width: calc(100vw - 32px);
+}
+.savebar.show { transform: translate(-50%, 0); }
+.savebar .dot { box-shadow: 0 0 0 4px var(--warn-soft); background: var(--warn); }
+.toast {
+  position: fixed; right: 22px; bottom: 22px; z-index: 70;
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border-strong); box-shadow: var(--shadow);
+  transform: translateY(150%); transition: transform .25s ease; max-width: calc(100vw - 32px);
+}
+.toast.show { transform: none; }
+.toast .ok-ic { width: 28px; height: 28px; border-radius: 50%; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; }
+.toast b { display: block; font-size: 13.5px; }
+.toast span { font-size: 12.5px; color: var(--text-3); }
+
+/* ---------- Modale / assistant ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(5, 8, 12, .6); backdrop-filter: blur(4px); z-index: 80; display: none; place-items: center; padding: 16px; }
+.overlay.show { display: grid; animation: fade .15s ease; }
+.modal { width: 100%; max-width: 520px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); }
+.add-hero { display: flex; gap: 16px; }
+.add-hero .poster-art { width: 96px; flex: none; padding: 10px; }
+.add-hero .poster-art strong { font-size: 13px; }
+
+.wizard { width: 100%; max-width: 860px; display: grid; grid-template-columns: 240px 1fr; overflow: hidden; max-height: calc(100vh - 32px); }
+.wiz-steps { background: var(--surface-2); border-right: 1px solid var(--border); padding: 22px 16px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+.wiz-steps .brand { margin-bottom: 14px; }
+.wiz-step { display: flex; align-items: center; gap: 10px; padding: 8px 8px; border-radius: 10px; color: var(--text-3); font-weight: 500; font-size: 13.5px; }
+.wiz-step i { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--border-strong); display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 700; flex: none; }
+.wiz-step.done { color: var(--text-2); }
+.wiz-step.done i { background: var(--ok); border-color: var(--ok); color: #fff; }
+.wiz-step.current { color: var(--text); background: var(--surface); }
+.wiz-step.current i { border-color: var(--accent); color: var(--accent); }
+.wiz-main { display: flex; flex-direction: column; min-height: 520px; overflow-y: auto; }
+.wiz-body { padding: 28px; flex: 1; display: flex; flex-direction: column; gap: 18px; }
+.wiz-body h2 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+.wiz-body > p { margin: -10px 0 0; color: var(--text-2); }
+.wiz-foot { display: flex; align-items: center; gap: 8px; padding: 16px 28px; border-top: 1px solid var(--border); }
+.wiz-foot .right { margin-left: auto; display: flex; gap: 8px; }
+.checklist { display: flex; flex-direction: column; gap: 4px; }
+.checklist div { display: flex; align-items: center; gap: 12px; padding: 9px 4px; color: var(--text-2); }
+.checklist .st { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border-strong); display: grid; place-items: center; flex: none; }
+.checklist .st.spin { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+.checklist .st.ok { background: var(--ok); border-color: var(--ok); color: #fff; }
+.checklist .st.ok .ic { width: 13px; height: 13px; stroke-width: 3; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.order-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.order-chips .badge { font-size: 13px; padding: 5px 12px; }
+
+.mockup-ribbon { font-size: 12px; color: var(--text-3); text-align: center; padding: 18px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g-main { grid-template-columns: 1fr; }
+}
+@media (max-width: 920px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 270px; z-index: 90; transform: translateX(-100%); transition: transform .25s ease; box-shadow: var(--shadow); }
+  .sidebar.open { transform: none; }
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 85; display: none; }
+  .scrim.show { display: block; }
+  .menu-btn { display: grid; }
+  .topbar { padding: 12px 16px; }
+  .content { padding: 20px 16px 90px; }
+  .svc-layout, .settings { grid-template-columns: 1fr; }
+  .settings-nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; }
+  .settings-nav button { white-space: nowrap; }
+  .settings-nav button.active { box-shadow: inset 0 -2px 0 var(--accent); }
+  .svc-list { flex-direction: row; overflow-x: auto; }
+  .svc-list button { white-space: nowrap; }
+  .svc-list button small { display: none; }
+  .wizard { grid-template-columns: 1fr; }
+  .wiz-steps { display: none; }
+}
+@media (max-width: 640px) {
+  .g4, .g3, .g2, .choice-cards { grid-template-columns: 1fr; }
+  .search { display: none; }
+  .topbar h1 { font-size: 17px; }
+  .vpn-pill-text { display: none; }
+  .setting { flex-direction: column; align-items: stretch; gap: 12px; }
+  .setting .ctl { justify-content: flex-start; }
+  .posters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .wiz-body { padding: 20px; }
+  .wiz-foot { padding: 14px 20px; }
+  .hide-sm { display: none; }
+  .savebar { left: 16px; right: 16px; transform: translateY(160%); }
+  .savebar.show { transform: none; }
+  .savebar .muted { display: none; }
+}
+@media (min-width: 921px) { .scrim { display: none !important; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4M3 12h18"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="m8 3 4 4 4-4"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h14v14H6a2 2 0 0 0-2 2 2 2 0 0 0 2 2h14"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 21h16"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M21 18h-1"/><circle cx="16" cy="6" r="2.5"/><circle cx="10" cy="12" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></symbol>
+  <symbol id="i-disk" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M3 15 6 5h12l3 10M7 16.5h.01"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="M15 4V2M15 10V8M11 6h2M17 6h2M4 20 14 10"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14m-6-6 6 6 6-6"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-lang" viewBox="0 0 24 24"><path d="M4 5h8M8 3v2M5 9c1.5 3 4 5 7 6M11 5c-1 4-3.5 7-7 9M13 21l4-9 4 9M14.5 18h5"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></symbol>
+</svg>
+
+<div class="app">
+  <!-- ============ Barre latérale ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo"><svg class="ic"><use href="#i-logo"/></svg></div>
+      <div class="brand-name">Motflix</div>
+    </div>
+
+    <div class="server-pill">
+      <span class="dot"></span>
+      <div><b>Serveur maison</b><span>9 services en ligne</span></div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-label">Général</div>
+      <button class="nav-item active" data-nav="dashboard"><svg class="ic"><use href="#i-home"/></svg>Tableau de bord</button>
+      <button class="nav-item" data-nav="services"><svg class="ic"><use href="#i-server"/></svg>Services</button>
+
+      <div class="nav-label">Médias</div>
+      <button class="nav-item" data-nav="films"><svg class="ic"><use href="#i-film"/></svg>Films<span class="count">8</span></button>
+      <button class="nav-item" data-nav="films" data-title="Séries"><svg class="ic"><use href="#i-tv"/></svg>Séries<span class="count">1</span></button>
+      <button class="nav-item" data-nav="films" data-title="Livres"><svg class="ic"><use href="#i-book"/></svg>Livres<span class="count">3</span></button>
+      <button class="nav-item" data-nav="films" data-title="Livres audio"><svg class="ic"><use href="#i-headphones"/></svg>Livres audio<span class="count">2</span></button>
+
+      <div class="nav-label">Activité</div>
+      <button class="nav-item" data-nav="downloads"><svg class="ic"><use href="#i-download"/></svg>Téléchargements<span class="count">3</span></button>
+
+      <div class="nav-label">Configuration</div>
+      <button class="nav-item" data-nav="settings"><svg class="ic"><use href="#i-settings"/></svg>Réglages</button>
+      <button class="nav-item" id="openWizard"><svg class="ic"><use href="#i-wand"/></svg>Assistant (aperçu)</button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="avatar">A</div>
+      <div><b>Administrateur</b><span>admin</span></div>
+      <button class="icon-btn" id="themeBtn" style="margin-left:auto;width:34px;height:34px" title="Changer de thème" aria-label="Changer de thème"><svg class="ic ic-sm"><use href="#i-sun"/></svg></button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ============ Contenu ============ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <h1 id="pageTitle">Tableau de bord</h1>
+      <label class="search">
+        <svg class="ic ic-sm dim"><use href="#i-search"/></svg>
+        <input placeholder="Rechercher un film, une série, un livre…">
+        <kbd>⌘K</kbd>
+      </label>
+      <span class="badge ok" title="VPN connecté"><svg class="ic ic-sm"><use href="#i-shield"/></svg><span class="vpn-pill-text">VPN · Suisse</span></span>
+      <button class="icon-btn" aria-label="Notifications"><svg class="ic"><use href="#i-bell"/></svg></button>
+    </header>
+
+    <main class="content">
+
+      <!-- ======== TABLEAU DE BORD ======== -->
+      <section class="view active" id="view-dashboard">
+        <div class="grid g4">
+          <div class="card stat">
+            <div class="stat-top"><span class="stat-icon"><svg class="ic"><use href="#i-download"/></svg></span>Téléchargements</div>
+            <div class="stat-value num">3 actifs</div>
+            <div class="stat-sub num">↓ 4,2 Mo/s · ↑ 820 Ko/s</div>
+          </div>
+          <div class="card stat">
+            <div class="stat-top"><span class="stat-icon warn"><svg class="ic"><use href="#i-disk"/></svg></span>Stockage</div>
+            <div class="stat-value num">412 Go <span class="dim" style="font-size:14px;font-weight:500">/ 2 To</span></div>
+            <div class="bar"><i style="width:21%"></i></div>
+          </div>
+          <div class="card stat">
+            <div class="stat-top"><span class="stat-icon ok"><svg class="ic"><use href="#i-shield"/></svg></span>VPN</div>
+            <div class="stat-value">Protégé</div>
+            <div class="stat-sub">IP masquée · port ouvert automatiquement</div>
+          </div>
+          <div class="card stat">
+            <div class="stat-top"><span class="stat-icon"><svg class="ic"><use href="#i-film"/></svg></span>Bibliothèque</div>
+            <div class="stat-value num">14 médias</div>
+            <div class="stat-sub">8 films · 1 série · 3 livres · 2 audio</div>
+          </div>
+        </div>
+
+        <div class="section-title">
+          <h2>Services</h2>
+          <span class="badge ok"><span class="dot" style="box-shadow:none"></span>Tout fonctionne</span>
+          <div class="right"><button class="btn btn-ghost" data-nav="services"><svg class="ic ic-sm"><use href="#i-terminal"/></svg>Consoles</button></div>
+        </div>
+        <div class="grid g3" id="svcGrid"></div>
+
+        <div class="grid g-main" style="margin-top:30px">
+          <div class="card">
+            <div class="card-head"><h3>En cours de téléchargement</h3><div class="right"><button class="btn btn-ghost" data-nav="downloads">Tout voir</button></div></div>
+            <div id="dashQueue"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Activité récente</h3></div>
+            <div class="row"><span class="type-ic" style="color:var(--ok)"><svg class="ic ic-sm"><use href="#i-check"/></svg></span><div class="row-main"><b>Big Buck Bunny ajouté à Plex</b><span>Films · VF · 1080p · 412 Mo</span></div><span class="timeline-time">il y a 4 min</span></div>
+            <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-download"/></svg></span><div class="row-main"><b>Sintel envoyé au téléchargement</b><span>Version MULTi trouvée (VF indisponible)</span></div><span class="timeline-time">il y a 12 min</span></div>
+            <div class="row"><span class="type-ic" style="color:var(--ok)"><svg class="ic ic-sm"><use href="#i-check"/></svg></span><div class="row-main"><b>Le Tour du monde en 80 jours</b><span>Livre audio · ajouté à Audiobookshelf</span></div><span class="timeline-time">il y a 1 h</span></div>
+            <div class="row"><span class="type-ic" style="color:var(--warn)"><svg class="ic ic-sm"><use href="#i-info"/></svg></span><div class="row-main"><b>Un site d'indexation ne répond pas</b><span>Nouvel essai automatique dans 15 min</span></div><span class="timeline-time">il y a 2 h</span></div>
+            <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-refresh"/></svg></span><div class="row-main"><b>Démarrage du serveur</b><span>9 services relancés automatiquement</span></div><span class="timeline-time">08:02</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======== SERVICES ======== -->
+      <section class="view" id="view-services">
+        <div class="svc-layout">
+          <div class="card svc-list" id="svcList"></div>
+          <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+            <div class="card">
+              <div class="svc-detail-head">
+                <span class="svc-icon" id="sdIcon"></span>
+                <div>
+                  <h2 id="sdName">Films</h2>
+                  <span class="dim" id="sdSub">Radarr · en ligne depuis 3 h 12 min</span>
+                </div>
+                <span class="badge ok" id="sdBadge"><span class="dot" style="box-shadow:none"></span>En ligne</span>
+                <div class="actions">
+                  <button class="btn btn-ok" disabled><svg class="ic ic-sm"><use href="#i-play"/></svg>Démarrer</button>
+                  <button class="btn btn-warn"><svg class="ic ic-sm"><use href="#i-refresh"/></svg>Redémarrer</button>
+                  <button class="btn btn-err"><svg class="ic ic-sm"><use href="#i-stop"/></svg>Arrêter</button>
+                  <button class="btn btn-ghost hide-sm" title="Mode avancé"><svg class="ic ic-sm"><use href="#i-external"/></svg>Interface d'origine</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid g2">
+              <div class="card spark-card"><div class="lbl"><span>Processeur</span><b class="num" id="sdCpu">3 %</b></div><svg class="spark" id="sparkCpu" viewBox="0 0 300 56" preserveAspectRatio="none"></svg></div>
+              <div class="card spark-card"><div class="lbl"><span>Mémoire</span><b class="num" id="sdRam">212 Mo</b></div><svg class="spark" id="sparkRam" viewBox="0 0 300 56" preserveAspectRatio="none"></svg></div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <svg class="ic"><use href="#i-terminal"/></svg><h3>Console</h3>
+                <div class="right chips" id="logChips">
+                  <button class="chip active" data-lvl="all">Tout</button>
+                  <button class="chip" data-lvl="w">Avertissements</button>
+                  <button class="chip" data-lvl="e">Erreurs</button>
+                </div>
+              </div>
+              <div class="console" id="console"></div>
+              <div class="console-bar">
+                <svg class="ic ic-sm dim"><use href="#i-search"/></svg>
+                <input id="logFilter" placeholder="Filtrer les logs…">
+                <span class="badge ok"><span class="dot" style="box-shadow:none"></span>En direct</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======== BIBLIOTHÈQUE ======== -->
+      <section class="view" id="view-films">
+        <div class="lib-toolbar">
+          <div class="chips">
+            <button class="chip active">Tous · 8</button>
+            <button class="chip">Disponibles · 5</button>
+            <button class="chip">En téléchargement · 2</button>
+            <button class="chip">Manquants · 1</button>
+          </div>
+          <div class="right">
+            <button class="btn"><svg class="ic ic-sm"><use href="#i-sliders"/></svg><span class="hide-sm">Trier</span></button>
+            <button class="btn btn-primary" data-open-add><svg class="ic ic-sm"><use href="#i-plus"/></svg>Ajouter</button>
+          </div>
+        </div>
+        <div class="posters" id="posters"></div>
+      </section>
+
+      <!-- ======== TÉLÉCHARGEMENTS ======== -->
+      <section class="view" id="view-downloads">
+        <div class="card" style="margin-bottom:16px">
+          <div class="dl-head">
+            <div class="speed"><svg class="ic"><use href="#i-arrow-down"/></svg><b class="num" id="dlSpeed">4,2 Mo/s</b><span class="dim">réception</span></div>
+            <div class="speed up"><svg class="ic"><use href="#i-arrow-up"/></svg><b class="num">820 Ko/s</b><span class="dim">envoi</span></div>
+            <span class="badge ok"><svg class="ic ic-sm"><use href="#i-shield"/></svg>Via VPN · port 51413 ouvert</span>
+            <div class="right">
+              <button class="btn"><svg class="ic ic-sm"><use href="#i-clock"/></svg>Mode lent</button>
+              <button class="btn"><svg class="ic ic-sm"><use href="#i-pause"/></svg>Tout mettre en pause</button>
+            </div>
+          </div>
+        </div>
+        <div class="card table-wrap">
+          <table>
+            <thead><tr><th>Nom</th><th class="hide-sm">Taille</th><th>Progression</th><th class="hide-sm">Vitesse</th><th class="hide-sm">État</th><th></th></tr></thead>
+            <tbody id="dlTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ======== RÉGLAGES ======== -->
+      <section class="view" id="view-settings">
+        <div class="settings">
+          <nav class="settings-nav" id="settingsNav">
+            <button class="active" data-panel="lang"><svg class="ic ic-sm"><use href="#i-lang"/></svg>Langue et qualité</button>
+            <button data-panel="dl"><svg class="ic ic-sm"><use href="#i-download"/></svg>Téléchargements</button>
+            <button data-panel="vpn"><svg class="ic ic-sm"><use href="#i-shield"/></svg>VPN</button>
+            <button data-panel="idx"><svg class="ic ic-sm"><use href="#i-list"/></svg>Sites d'indexation</button>
+            <button data-panel="play"><svg class="ic ic-sm"><use href="#i-tv"/></svg>Lecture</button>
+            <button data-panel="users"><svg class="ic ic-sm"><use href="#i-users"/></svg>Utilisateurs et rôles</button>
+            <button data-panel="adv"><svg class="ic ic-sm"><use href="#i-code"/></svg>Mode avancé</button>
+          </nav>
+
+          <div>
+            <!-- Langue & qualité -->
+            <div class="spanel active" data-spanel="lang">
+              <header>
+                <h2>Langue et qualité</h2>
+                <p>Ce que Motflix cherche en priorité quand vous ajoutez un film ou une série.</p>
+                <div class="applies"><span class="badge accent">Appliqué à : Films</span><span class="badge accent">Séries</span></div>
+              </header>
+
+              <div class="card">
+                <div class="card-head"><h3>Langues préférées</h3><span class="dim" style="font-size:13px">de la plus voulue à la moins voulue</span></div>
+                <div class="setting col">
+                  <div class="lang-list" id="langList"></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Accepter la VFQ comme VF</b><p>Doublage québécois. Désactivé, il est traité comme une langue non désirée.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" data-dirty><span></span></label></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Remplacer quand une meilleure langue sort</b><p>Exemple : un film en VOSTFR sera remplacé automatiquement dès qu'une VF est disponible.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" checked data-dirty><span></span></label></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Refuser les autres langues</b><p>Ignore tout ce qui n'est pas dans la liste ci-dessus.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" checked data-dirty><span></span></label></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><h3>Qualité</h3></div>
+                <div class="setting">
+                  <div class="txt"><b>Résolution</b><p>1080p est le meilleur compromis pour une télé et un disque raisonnable.</p></div>
+                  <div class="ctl"><div class="seg" data-seg><button>720p</button><button class="active">1080p</button><button>4K</button></div></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Accepter le HDR</b><p>Couleurs plus riches si votre télé le supporte. Fichiers un peu plus lourds.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" data-dirty><span></span></label></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Éviter les « remux »</b><p>Copies intégrales du disque Blu-ray : qualité maximale, mais 20 à 40 Go par film.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" checked data-dirty><span></span></label></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><h3>Taille des fichiers</h3></div>
+                <div class="setting col">
+                  <div class="txt"><b>Taille maximale d'un film</b><p>Les versions plus lourdes seront ignorées.</p></div>
+                  <div class="range-row"><input type="range" min="1" max="40" step="0.5" value="4" id="rFilm" data-dirty><span class="range-val num" id="vFilm">4 Go</span></div>
+                </div>
+                <div class="setting col">
+                  <div class="txt"><b>Taille maximale d'un épisode</b><p>Pour un épisode d'environ 45 minutes.</p></div>
+                  <div class="range-row"><input type="range" min="0.5" max="10" step="0.5" value="1.5" id="rEp" data-dirty><span class="range-val num" id="vEp">1,5 Go</span></div>
+                </div>
+                <div class="setting col">
+                  <div class="hint"><svg class="ic"><use href="#i-info"/></svg><span id="sizeHint"></span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Téléchargements -->
+            <div class="spanel" data-spanel="dl">
+              <header>
+                <h2>Téléchargements</h2>
+                <p>Vitesse, horaires et partage.</p>
+                <div class="applies"><span class="badge accent">Appliqué à : qBittorrent</span></div>
+              </header>
+              <div class="card">
+                <div class="card-head"><h3>Vitesse</h3></div>
+                <div class="setting">
+                  <div class="txt"><b>Vitesse maximale de réception</b><p>0 = illimitée.</p></div>
+                  <div class="ctl input-unit"><input class="input num" value="0" data-dirty><span class="dim">Mo/s</span></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Vitesse maximale d'envoi</b><p>Garder un peu de marge évite de ralentir votre connexion.</p></div>
+                  <div class="ctl input-unit"><input class="input num" value="2" data-dirty><span class="dim">Mo/s</span></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Ralentir en journée</b><p>Divise la vitesse par deux de 9 h à 18 h pour ne pas gêner le reste de la maison.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" data-dirty><span></span></label></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Téléchargements simultanés</b><p>Les autres attendent leur tour.</p></div>
+                  <div class="ctl input-unit"><input class="input num" value="3" data-dirty></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head"><h3>Partage</h3></div>
+                <div class="setting">
+                  <div class="txt"><b>Arrêter de partager après</b><p>Le premier des deux qui est atteint.</p></div>
+                  <div class="ctl" style="flex-wrap:wrap"><div class="input-unit"><span class="dim">ratio</span><input class="input num" value="1,0" style="width:70px" data-dirty></div><span class="dim">ou</span><div class="input-unit"><input class="input num" value="3" style="width:60px" data-dirty><span class="dim">jours</span></div></div>
+                </div>
+                <div class="setting">
+                  <div class="txt"><b>Retirer le torrent après le partage</b><p>Le fichier reste dans votre bibliothèque.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" checked data-dirty><span></span></label></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VPN -->
+            <div class="spanel" data-spanel="vpn">
+              <header>
+                <h2>VPN</h2>
+                <p>Masque votre adresse IP pendant les téléchargements. Facultatif.</p>
+                <div class="applies"><span class="badge accent">Appliqué à : qBittorrent</span></div>
+              </header>
+              <div class="card">
+                <div class="setting">
+                  <div class="txt"><b>Utiliser un VPN</b><p>Si le VPN se coupe, les téléchargements s'arrêtent net : votre IP n'est jamais exposée.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" checked id="vpnToggle" data-dirty><span></span></label></div>
+                </div>
+                <div id="vpnBlock">
+                  <div class="setting">
+                    <div class="txt"><b>Fournisseur</b><p>Plus de 30 fournisseurs pris en charge.</p></div>
+                    <div class="ctl"><select class="input" style="width:220px" data-dirty><option>ProtonVPN</option><option>Mullvad</option><option>Private Internet Access</option><option>Surfshark</option><option>NordVPN</option><option>Autre (WireGuard)</option></select></div>
+                  </div>
+                  <div class="setting">
+                    <div class="txt"><b>Clé WireGuard</b><p>Fournie dans l'espace client de votre VPN.</p></div>
+                    <div class="ctl"><input class="input mono" type="password" value="••••••••••••••••••" style="width:220px" data-dirty></div>
+                  </div>
+                  <div class="setting col">
+                    <div class="grid g2">
+                      <div class="hint ok"><svg class="ic"><use href="#i-shield"/></svg><span><b>Connecté · Suisse</b><br>IP visible : <span class="mono">203.0.113.42</span> (celle du VPN)</span></div>
+                      <div class="hint ok"><svg class="ic"><use href="#i-check"/></svg><span><b>Port 51413 ouvert automatiquement</b><br>Rien à configurer sur votre box.</span></div>
+                    </div>
+                    <div><button class="btn"><svg class="ic ic-sm"><use href="#i-refresh"/></svg>Tester la connexion</button></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Indexeurs -->
+            <div class="spanel" data-spanel="idx">
+              <header>
+                <h2>Sites d'indexation</h2>
+                <p>Les sites où Motflix cherche les fichiers. Ils sont partagés automatiquement avec Films, Séries et Livres.</p>
+                <div class="applies"><span class="badge accent">Appliqué à : Prowlarr</span><span class="badge accent">FlareSolverr</span></div>
+              </header>
+              <div class="card">
+                <div class="card-head"><h3>Vos sites</h3><div class="right"><button class="btn btn-primary"><svg class="ic ic-sm"><use href="#i-plus"/></svg>Ajouter un site</button></div></div>
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-globe"/></svg></span><div class="row-main"><b>Site public A</b><span>Films, séries · réponse en 0,4 s</span></div><span class="badge ok">OK</span><label class="toggle"><input type="checkbox" checked><span></span></label></div>
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-globe"/></svg></span><div class="row-main"><b>Site public B</b><span>Livres, livres audio · protection anti-bot gérée</span></div><span class="badge accent"><svg class="ic ic-sm"><use href="#i-zap"/></svg>FlareSolverr</span><label class="toggle"><input type="checkbox" checked><span></span></label></div>
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-globe"/></svg></span><div class="row-main"><b>Site public C</b><span>Ne répond pas depuis 2 h</span></div><span class="badge warn">Lent</span><label class="toggle"><input type="checkbox" checked><span></span></label></div>
+              </div>
+            </div>
+
+            <!-- Lecture -->
+            <div class="spanel" data-spanel="play">
+              <header>
+                <h2>Lecture</h2>
+                <p>Où regarder vos films et séries.</p>
+              </header>
+              <div class="choice-cards" data-choice>
+                <button class="choice active"><svg class="ic" style="width:24px;height:24px"><use href="#i-tv"/></svg><b>Plex</b><span>Sur la télé, le téléphone et l'ordinateur. Bibliothèques mises à jour après chaque ajout.</span><span class="badge ok">Connecté · 2 bibliothèques</span></button>
+                <button class="choice" disabled><svg class="ic" style="width:24px;height:24px"><use href="#i-logo"/></svg><b>Motflix App</b><span>Notre application maison, pour macOS, Windows, Linux et Android.</span><span class="badge">Bientôt</span></button>
+              </div>
+              <div class="card">
+                <div class="setting">
+                  <div class="txt"><b>Livres et livres audio</b><p>Toujours servis par Audiobookshelf (appli mobile disponible).</p></div>
+                  <div class="ctl"><span class="badge ok">Connecté</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Utilisateurs -->
+            <div class="spanel" data-spanel="users">
+              <header>
+                <h2>Utilisateurs et rôles</h2>
+                <p>Facultatif. Par défaut, seul l'administrateur utilise le panel ; les autres regardent via Plex.</p>
+              </header>
+              <div class="card">
+                <div class="setting">
+                  <div class="txt"><b>Activer les comptes utilisateurs</b><p>Permet à d'autres personnes de se connecter au panel, avec des droits limités.</p></div>
+                  <div class="ctl"><label class="toggle"><input type="checkbox" id="usersToggle" data-dirty><span></span></label></div>
+                </div>
+              </div>
+              <div class="card locked table-wrap" id="rolesCard">
+                <div class="card-head"><h3>Rôles</h3><div class="right"><button class="btn"><svg class="ic ic-sm"><use href="#i-plus"/></svg>Inviter</button></div></div>
+                <table class="roles-table">
+                  <thead><tr><th>Permission</th><th>Admin</th><th>Membre</th><th>Lecture seule</th></tr></thead>
+                  <tbody>
+                    <tr><td>Voir la bibliothèque</td><td><input type="checkbox" checked disabled></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
+                    <tr><td>Demander des films et séries</td><td><input type="checkbox" checked disabled></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td></tr>
+                    <tr><td>Demander des livres</td><td><input type="checkbox" checked disabled></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td></tr>
+                    <tr><td>Demandes validées sans l'admin</td><td><input type="checkbox" checked disabled></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+                    <tr><td>Modifier les réglages</td><td><input type="checkbox" checked disabled></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Avancé -->
+            <div class="spanel" data-spanel="adv">
+              <header>
+                <h2>Mode avancé</h2>
+                <p>Accès direct aux réglages bruts de chaque outil, pour les cas que le mode simple ne couvre pas.</p>
+              </header>
+              <div class="hint"><svg class="ic"><use href="#i-info"/></svg><span>Les réglages simples restent la source principale. Une modification ici peut être écrasée si vous changez ensuite un réglage simple qui la recouvre.</span></div>
+              <div class="card">
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-sliders"/></svg></span><div class="row-main"><b>Profils de qualité</b><span>Films, Séries</span></div><button class="btn btn-ghost">Ouvrir</button></div>
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-lang"/></svg></span><div class="row-main"><b>Formats personnalisés (langue, codec, groupe)</b><span>4 formats créés par Motflix</span></div><button class="btn btn-ghost">Ouvrir</button></div>
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-folder"/></svg></span><div class="row-main"><b>Nommage et dossiers</b><span>« Titre (Année) »</span></div><button class="btn btn-ghost">Ouvrir</button></div>
+                <div class="row"><span class="type-ic"><svg class="ic ic-sm"><use href="#i-external"/></svg></span><div class="row-main"><b>Interfaces d'origine</b><span>Radarr, Sonarr, Prowlarr, qBittorrent…</span></div><button class="btn btn-ghost">Ouvrir</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p class="mockup-ribbon">Maquette Motflix — données fictives, contenus libres de droits utilisés comme exemples.</p>
+    </main>
+  </div>
+</div>
+
+<!-- Barre d'enregistrement -->
+<div class="savebar" id="savebar">
+  <span class="dot"></span><b>Modifications non enregistrées</b>
+  <button class="btn btn-ghost" id="cancelBtn">Annuler</button>
+  <button class="btn btn-primary" id="saveBtn">Enregistrer</button>
+</div>
+<div class="toast" id="toast">
+  <span class="ok-ic"><svg class="ic ic-sm"><use href="#i-check"/></svg></span>
+  <div><b>Réglages enregistrés</b><span id="toastSub">Appliqués à Films et Séries</span></div>
+</div>
+
+<!-- Modale ajout -->
+<div class="overlay" id="addModal">
+  <div class="card modal">
+    <div class="card-head"><h3>Ajouter un film</h3><div class="right"><button class="icon-btn" data-close aria-label="Fermer" style="width:32px;height:32px"><svg class="ic ic-sm"><use href="#i-x"/></svg></button></div></div>
+    <div class="modal-body">
+      <label class="search" style="max-width:none;margin:0"><svg class="ic ic-sm dim"><use href="#i-search"/></svg><input value="Cosmos Laundromat"></label>
+      <div class="add-hero">
+        <div class="poster-art" style="background:linear-gradient(160deg,#3a7bd5,#1a2a6c)"><strong>Cosmos Laundromat</strong></div>
+        <div>
+          <b style="font-size:16px">Cosmos Laundromat</b> <span class="dim">(2015)</span>
+          <p class="muted" style="margin:6px 0 10px;font-size:13px">Court métrage · 12 min · Blender Foundation</p>
+          <span class="badge accent">Préférences : VF › MULTi › VO › VOSTFR · 1080p</span>
+        </div>
+      </div>
+      <div class="setting" style="padding:0;border:0">
+        <div class="txt"><b>Lancer la recherche maintenant</b><p>Sinon, le film sera cherché lors du prochain passage automatique.</p></div>
+        <div class="ctl"><label class="toggle"><input type="checkbox" checked><span></span></label></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" data-close>Annuler</button><button class="btn btn-primary" data-close><svg class="ic ic-sm"><use href="#i-plus"/></svg>Ajouter</button></div>
+  </div>
+</div>
+
+<!-- Assistant -->
+<div class="overlay" id="wizard">
+  <div class="card wizard">
+    <aside class="wiz-steps">
+      <div class="brand"><div class="brand-logo"><svg class="ic"><use href="#i-logo"/></svg></div><div class="brand-name">Motflix</div></div>
+      <div id="wizSteps"></div>
+    </aside>
+    <div class="wiz-main">
+      <div class="wiz-body" id="wizBody"></div>
+      <div class="wiz-foot">
+        <span class="dim" id="wizCount"></span>
+        <div class="right">
+          <button class="btn btn-ghost" id="wizPrev">Retour</button>
+          <button class="btn btn-primary" id="wizNext">Continuer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const icon = (id, cls = 'ic') => `<svg class="${cls}"><use href="#i-${id}"/></svg>`;
+const fr = (n, d = 1) => n.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/* ---------- Données fictives ---------- */
+const services = [
+  { id: 'radarr', name: 'Films', tool: 'Radarr', icon: 'film', cpu: 3, ram: 212, up: '3 h 12 min' },
+  { id: 'sonarr', name: 'Séries', tool: 'Sonarr', icon: 'tv', cpu: 2, ram: 198, up: '3 h 12 min' },
+  { id: 'lazylibrarian', name: 'Livres', tool: 'LazyLibrarian', icon: 'book', cpu: 1, ram: 96, up: '3 h 12 min' },
+  { id: 'prowlarr', name: 'Sites d\'indexation', tool: 'Prowlarr', icon: 'list', cpu: 1, ram: 154, up: '3 h 12 min' },
+  { id: 'qbittorrent', name: 'Téléchargement', tool: 'qBittorrent', icon: 'download', cpu: 9, ram: 341, up: '3 h 11 min' },
+  { id: 'gluetun', name: 'VPN', tool: 'Gluetun', icon: 'shield', cpu: 2, ram: 38, up: '3 h 12 min' },
+  { id: 'plex', name: 'Lecture', tool: 'Plex', icon: 'play', cpu: 4, ram: 512, up: '3 h 12 min' },
+  { id: 'audiobookshelf', name: 'Livres audio', tool: 'Audiobookshelf', icon: 'headphones', cpu: 1, ram: 120, up: '3 h 12 min' },
+  { id: 'flaresolverr', name: 'Anti-bot', tool: 'FlareSolverr', icon: 'zap', cpu: 0, ram: 180, up: '3 h 12 min', warn: true },
+];
+
+const downloads = [
+  { name: 'Sintel', sub: 'Film · MULTi · 1080p', type: 'film', size: '654 Mo', p: 46, speed: 2.6, state: 'Téléchargement' },
+  { name: 'Tears of Steel', sub: 'Film · VF · 1080p', type: 'film', size: '742 Mo', p: 12, speed: 1.4, state: 'Téléchargement' },
+  { name: 'Vingt mille lieues sous les mers', sub: 'Livre audio · LibriVox', type: 'headphones', size: '186 Mo', p: 81, speed: 0.2, state: 'Téléchargement' },
+  { name: 'Le Comte de Monte-Cristo', sub: 'Livre · EPUB', type: 'book', size: '2,1 Mo', p: 100, speed: 0, state: 'En partage' },
+];
+
+const films = [
+  { t: 'Big Buck Bunny', y: 2008, g: '#56ab2f,#1d4d1a', b: ['ok', 'VF · 1080p'] },
+  { t: 'Sintel', y: 2010, g: '#e96443,#3b1c32', b: ['', 'Téléchargement'], p: 46 },
+  { t: 'Tears of Steel', y: 2012, g: '#4b6cb7,#182848', b: ['', 'Téléchargement'], p: 12 },
+  { t: 'Elephants Dream', y: 2006, g: '#c79081,#3e2b2b', b: ['ok', 'VO · 1080p'] },
+  { t: 'Cosmos Laundromat', y: 2015, g: '#3a7bd5,#1a2a6c', b: ['warn', 'Manquant'] },
+  { t: 'Spring', y: 2019, g: '#f7b733,#6b3a1b', b: ['ok', 'VF · 4K'] },
+  { t: 'Agent 327', y: 2017, g: '#8e2de2,#23074d', b: ['ok', 'MULTi · 1080p'] },
+  { t: 'Caminandes', y: 2013, g: '#11998e,#0b3d36', b: ['ok', 'VOSTFR · 1080p'] },
+];
+
+/* ---------- Navigation ---------- */
+const titles = { dashboard: 'Tableau de bord', services: 'Services', films: 'Films', downloads: 'Téléchargements', settings: 'Réglages' };
+function go(view, title, btn) {
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  $$('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = btn && btn.classList.contains('nav-item') ? btn : $(`.nav-item[data-nav="${view}"]:not([data-title])`);
+  target && target.classList.add('active');
+  $('#pageTitle').textContent = title || titles[view];
+  closeMenu();
+  window.scrollTo({ top: 0 });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-nav]');
+  if (b) go(b.dataset.nav, b.dataset.title, b);
+});
+
+/* Menu mobile */
+const sidebar = $('#sidebar'), scrim = $('#scrim');
+function closeMenu() { sidebar.classList.remove('open'); scrim.classList.remove('show'); }
+$('#menuBtn').onclick = () => { sidebar.classList.add('open'); scrim.classList.add('show'); };
+scrim.onclick = closeMenu;
+
+/* Thème */
+$('#themeBtn').onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme === 'dark';
+  root.dataset.theme = dark ? 'light' : 'dark';
+  $('#themeBtn').innerHTML = icon(dark ? 'moon' : 'sun', 'ic ic-sm');
+  try { localStorage.setItem('motflix-theme', root.dataset.theme); } catch (_) {}
+};
+try {
+  const saved = localStorage.getItem('motflix-theme');
+  if (saved) { document.documentElement.dataset.theme = saved; $('#themeBtn').innerHTML = icon(saved === 'dark' ? 'sun' : 'moon', 'ic ic-sm'); }
+} catch (_) {}
+
+/* ---------- Tableau de bord ---------- */
+$('#svcGrid').innerHTML = services.map(s => `
+  <div class="card svc">
+    <div class="svc-head">
+      <span class="svc-icon">${icon(s.icon)}</span>
+      <div class="svc-name"><b>${s.name}</b><span>${s.tool}</span></div>
+      ${s.warn ? '<span class="badge warn">En veille</span>' : '<span class="badge ok">En ligne</span>'}
+    </div>
+    <div class="svc-metrics">
+      <div class="svc-metric"><b class="num">${s.cpu} %</b>Processeur<div class="bar" style="margin-top:6px"><i style="width:${Math.max(s.cpu * 4, 3)}%"></i></div></div>
+      <div class="svc-metric"><b class="num">${s.ram} Mo</b>Mémoire<div class="bar" style="margin-top:6px"><i style="width:${Math.round(s.ram / 10.24)}%"></i></div></div>
+    </div>
+    <div class="svc-actions">
+      <button class="btn btn-ghost" title="Redémarrer">${icon('refresh', 'ic ic-sm')}</button>
+      <button class="btn btn-ghost" title="Arrêter">${icon('stop', 'ic ic-sm')}</button>
+      <button class="btn" data-svc="${s.id}">${icon('terminal', 'ic ic-sm')}Console</button>
+    </div>
+  </div>`).join('');
+
+function renderDashQueue() {
+  $('#dashQueue').innerHTML = downloads.filter(d => d.p < 100).map(d => `
+    <div class="row">
+      <span class="type-ic">${icon(d.type)}</span>
+      <div class="row-main">
+        <b>${d.name}</b>
+        <div class="bar" style="margin:7px 0 5px"><i style="width:${d.p}%"></i></div>
+        <span class="num">${Math.round(d.p)} % · ${fr(d.speed)} Mo/s · ${d.sub}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- Services / console ---------- */
+const logTpl = {
+  radarr: [
+    ['i', 'RssSyncService', 'Starting RSS Sync'],
+    ['i', 'DownloadDecisionMaker', 'Processing 87 releases'],
+    ['i', 'DownloadDecisionMaker', 'Sintel (2010): best match MULTi 1080p (score 300)'],
+    ['i', 'DownloadService', 'Report sent to qBittorrent. Sintel.2010.MULTi.1080p'],
+    ['i', 'RssSyncService', 'RSS Sync Completed. Reports found: 87, Reports grabbed: 1'],
+    ['w', 'IndexerStatusService', 'Indexer "Site public C" is slow to respond (12.4s)'],
+    ['i', 'ImportApprovedMovies', 'Hardlinked Big.Buck.Bunny.2008.VF.1080p.mkv → /data/media/films'],
+    ['i', 'PlexServerService', 'Updating Plex library section "Films"'],
+  ],
+  qbittorrent: [
+    ['i', 'Session', 'Listening on port 51413 (forwarded by VPN)'],
+    ['i', 'Torrent', 'Added "Sintel.2010.MULTi.1080p" to category "films"'],
+    ['i', 'Torrent', 'Added "Tears.of.Steel.2012.VF.1080p" to category "films"'],
+    ['i', 'Torrent', '"Le Comte de Monte-Cristo" finished, seeding (ratio 0.42)'],
+    ['w', 'Tracker', 'Tracker timeout, retrying in 30s'],
+  ],
+  gluetun: [
+    ['i', 'wireguard', 'Connecting to ProtonVPN (CH)'],
+    ['i', 'ip getter', 'Public IP address is 203.0.113.42 (Switzerland)'],
+    ['i', 'port forwarding', 'Port forwarded is 51413'],
+    ['i', 'healthcheck', 'healthy'],
+  ],
+  flaresolverr: [
+    ['i', 'FlareSolverr', 'Test successful'],
+    ['i', 'FlareSolverr', 'Serving on http://0.0.0.0:8191'],
+    ['w', 'FlareSolverr', 'No request for 2h, browser idle'],
+  ],
+};
+const defaultLogs = [
+  ['i', 'Startup', 'Starting service'],
+  ['i', 'Config', 'Configuration loaded'],
+  ['i', 'Health', 'All checks passed'],
+  ['e', 'Network', 'Temporary DNS failure, retrying (resolved)'],
+  ['i', 'Health', 'All checks passed'],
+];
+let currentSvc = services[0], logLevel = 'all';
+
+$('#svcList').innerHTML = services.map((s, i) => `
+  <button data-svc="${s.id}" class="${i === 0 ? 'active' : ''}">
+    <span class="dot ${s.warn ? 'warn' : ''}" style="box-shadow:none"></span>${s.name}<small>${s.tool}</small>
+  </button>`).join('');
+
+function stamp(i, n) {
+  const d = new Date(Date.now() - (n - i) * 47000);
+  return d.toTimeString().slice(0, 8);
+}
+function renderConsole() {
+  const lines = logTpl[currentSvc.id] || defaultLogs;
+  const q = $('#logFilter').value.toLowerCase();
+  $('#console').innerHTML = lines
+    .map((l, i) => ({ l, ts: stamp(i, lines.length) }))
+    .filter(({ l }) => logLevel === 'all' || l[0] === logLevel)
+    .filter(({ l }) => !q || (l[1] + ' ' + l[2]).toLowerCase().includes(q))
+    .map(({ l, ts }) => `<div><span class="t">${ts}</span> <span class="${l[0]}">[${{ i: 'Info', w: 'Avert', e: 'Erreur' }[l[0]]}]</span> <span class="t">${l[1]}:</span> ${l[2]}</div>`)
+    .join('') || '<div class="t">Aucune ligne ne correspond.</div>';
+  const c = $('#console'); c.scrollTop = c.scrollHeight;
+}
+function spark(el, base, amp) {
+  const pts = Array.from({ length: 30 }, (_, i) => base + Math.sin(i / 2.3) * amp + Math.random() * amp);
+  const max = Math.max(...pts) * 1.2;
+  const d = pts.map((v, i) => `${(i / 29) * 300},${56 - (v / max) * 52}`).join(' L');
+  el.innerHTML = `<path d="M${d} L300,56 L0,56Z" fill="var(--accent-soft)"/><path d="M${d}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+}
+function selectSvc(id) {
+  currentSvc = services.find(s => s.id === id) || services[0];
+  $$('#svcList button').forEach(b => b.classList.toggle('active', b.dataset.svc === currentSvc.id));
+  $('#sdIcon').innerHTML = icon(currentSvc.icon);
+  $('#sdName').textContent = currentSvc.name;
+  $('#sdSub').textContent = `${currentSvc.tool} · en ligne depuis ${currentSvc.up}`;
+  $('#sdBadge').className = 'badge ' + (currentSvc.warn ? 'warn' : 'ok');
+  $('#sdBadge').innerHTML = `<span class="dot ${currentSvc.warn ? 'warn' : ''}" style="box-shadow:none"></span>${currentSvc.warn ? 'En veille' : 'En ligne'}`;
+  $('#sdCpu').textContent = currentSvc.cpu + ' %';
+  $('#sdRam').textContent = currentSvc.ram + ' Mo';
+  spark($('#sparkCpu'), currentSvc.cpu + 1, 2);
+  spark($('#sparkRam'), currentSvc.ram, 20);
+  renderConsole();
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-svc]');
+  if (!b) return;
+  if (!b.closest('#svcList')) go('services');
+  selectSvc(b.dataset.svc);
+});
+$('#logChips').onclick = e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  $$('#logChips .chip').forEach(x => x.classList.toggle('active', x === c));
+  logLevel = c.dataset.lvl; renderConsole();
+};
+$('#logFilter').oninput = renderConsole;
+selectSvc('radarr');
+
+/* ---------- Bibliothèque ---------- */
+$('#posters').innerHTML = films.map(f => `
+  <div class="poster" ${f.b[1] === 'Manquant' ? 'data-open-add' : ''}>
+    <div class="poster-art" style="background:linear-gradient(160deg,${f.g})">
+      <span class="badge ${f.b[0]}">${f.b[1]}</span>
+      <strong>${f.t}</strong>
+      ${f.p ? `<div class="prog"><i style="width:${f.p}%"></i></div>` : ''}
+    </div>
+    <div class="poster-meta"><b>${f.t}</b><span>${f.y}</span></div>
+  </div>`).join('') + `
+  <button class="poster-add" data-open-add><div>${icon('plus')}<div style="margin-top:6px;font-weight:550">Ajouter un film</div></div></button>`;
+
+/* ---------- Téléchargements ---------- */
+function renderDownloads() {
+  $('#dlTable').innerHTML = downloads.map(d => `
+    <tr>
+      <td><div class="title-cell"><span class="type-ic">${icon(d.type)}</span><div><b>${d.name}</b><span>${d.sub}</span></div></div></td>
+      <td class="hide-sm num">${d.size}</td>
+      <td class="prog-cell"><div class="lbl num"><span>${Math.round(d.p)} %</span><span>${d.p < 100 ? Math.max(1, Math.round((100 - d.p) / 6)) + ' min' : ''}</span></div><div class="bar ${d.p >= 100 ? 'ok' : ''}"><i style="width:${d.p}%"></i></div></td>
+      <td class="hide-sm num">${d.speed ? fr(d.speed) + ' Mo/s' : '—'}</td>
+      <td class="hide-sm"><span class="badge ${d.p >= 100 ? 'ok' : 'accent'}">${d.p >= 100 ? 'En partage' : d.state}</span></td>
+      <td><button class="btn btn-ghost" aria-label="Pause">${icon(d.p >= 100 ? 'stop' : 'pause', 'ic ic-sm')}</button></td>
+    </tr>`).join('');
+}
+function tick() {
+  downloads.forEach(d => {
+    if (d.p >= 100) return;
+    d.p = Math.min(100, d.p + d.speed * (0.4 + Math.random() * 0.4));
+    if (d.p >= 100) { d.speed = 0; d.state = 'En partage'; }
+  });
+  const total = downloads.reduce((a, d) => a + d.speed, 0);
+  $('#dlSpeed').textContent = fr(total) + ' Mo/s';
+  renderDownloads(); renderDashQueue();
+}
+renderDownloads(); renderDashQueue();
+setInterval(tick, 2000);
+
+/* ---------- Modale ajout ---------- */
+const addModal = $('#addModal');
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-open-add]')) addModal.classList.add('show');
+  if (e.target.closest('[data-close]') || e.target === addModal) addModal.classList.remove('show');
+});
+
+/* ---------- Réglages ---------- */
+$('#settingsNav').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $$('#settingsNav button').forEach(x => x.classList.toggle('active', x === b));
+  $$('.spanel').forEach(p => p.classList.toggle('active', p.dataset.spanel === b.dataset.panel));
+};
+
+const langDefs = {
+  VF: 'TRUEFRENCH, VFF, VFI, FRENCH',
+  MULTi: 'Piste française + version originale',
+  VO: 'Version originale, sans piste française',
+  VOSTFR: 'Version originale sous-titrée en français',
+};
+const langNames = { VF: 'VF — Version française', MULTi: 'MULTi', VO: 'VO — Version originale', VOSTFR: 'VOSTFR' };
+const defaultOrder = ['VF', 'MULTi', 'VO', 'VOSTFR'];
+let langOrder = [...defaultOrder];
+
+function renderLangs(moved) {
+  $('#langList').innerHTML = langOrder.map((k, i) => `
+    <div class="lang-item ${k === moved ? 'moved' : ''}" data-k="${k}">
+      <span class="grip">${icon('grip', 'ic ic-sm')}</span>
+      <span class="lang-rank num">${i + 1}</span>
+      <div class="txt"><b>${langNames[k]}</b><span>${langDefs[k]}</span></div>
+      <div class="arrows">
+        <button data-move="-1" ${i === 0 ? 'disabled' : ''} aria-label="Monter">${icon('up', 'ic ic-sm')}</button>
+        <button data-move="1" ${i === langOrder.length - 1 ? 'disabled' : ''} aria-label="Descendre">${icon('down', 'ic ic-sm')}</button>
+      </div>
+    </div>`).join('');
+}
+$('#langList').onclick = e => {
+  const b = e.target.closest('[data-move]'); if (!b) return;
+  const k = b.closest('.lang-item').dataset.k;
+  const i = langOrder.indexOf(k), j = i + Number(b.dataset.move);
+  [langOrder[i], langOrder[j]] = [langOrder[j], langOrder[i]];
+  renderLangs(k); dirty();
+};
+renderLangs();
+
+/* Segmented controls & choix */
+document.addEventListener('click', e => {
+  const sb = e.target.closest('[data-seg] button');
+  if (sb) { $$('button', sb.parentElement).forEach(x => x.classList.toggle('active', x === sb)); if (sb.closest('#view-settings')) dirty(); }
+});
+
+/* Tailles */
+function gb(v) { return fr(Number(v), v % 1 ? 1 : 0) + ' Go'; }
+function updateSizes() {
+  const f = $('#rFilm').value, ep = $('#rEp').value;
+  $('#vFilm').textContent = gb(f);
+  $('#vEp').textContent = gb(ep);
+  const perMin = Math.round((f * 1024) / 120);
+  $('#sizeHint').innerHTML = `Soit environ <b>${perMin} Mo par minute</b> pour un film de 2 h. Avec ${gb(f)} max, 1 To contient environ <b>${Math.floor(1024 / f)} films</b>.`;
+}
+['#rFilm', '#rEp'].forEach(s => $(s).addEventListener('input', updateSizes));
+updateSizes();
+
+/* VPN & utilisateurs */
+$('#vpnToggle').onchange = e => $('#vpnBlock').classList.toggle('locked', !e.target.checked);
+$('#usersToggle').onchange = e => $('#rolesCard').classList.toggle('locked', !e.target.checked);
+
+/* Enregistrement */
+const snapshot = new Map();
+$$('[data-dirty]').forEach(el => snapshot.set(el, el.type === 'checkbox' ? el.checked : el.value));
+const segSnapshot = $$('[data-seg]').map(s => $$('button', s).findIndex(b => b.classList.contains('active')));
+function dirty() { $('#savebar').classList.add('show'); }
+document.addEventListener('input', e => { if (e.target.matches('[data-dirty]')) dirty(); });
+document.addEventListener('change', e => { if (e.target.matches('[data-dirty]')) dirty(); });
+$('#cancelBtn').onclick = () => {
+  snapshot.forEach((v, el) => { if (el.type === 'checkbox') el.checked = v; else el.value = v; el.dispatchEvent(new Event('change')); });
+  $$('[data-seg]').forEach((s, i) => $$('button', s).forEach((b, j) => b.classList.toggle('active', j === segSnapshot[i])));
+  langOrder = [...defaultOrder]; renderLangs(); updateSizes();
+  $('#savebar').classList.remove('show');
+};
+$('#saveBtn').onclick = () => {
+  snapshot.forEach((_, el) => snapshot.set(el, el.type === 'checkbox' ? el.checked : el.value));
+  $$('[data-seg]').forEach((s, i) => segSnapshot[i] = $$('button', s).findIndex(b => b.classList.contains('active')));
+  defaultOrder.splice(0, 4, ...langOrder); renderLangs();
+  $('#savebar').classList.remove('show');
+  const panel = $('.spanel.active');
+  $('#toastSub').textContent = 'Appliqués à ' + ($$('.applies .badge', panel).map(b => b.textContent.replace('Appliqué à : ', '')).join(' et ') || 'Motflix');
+  $('#toast').classList.add('show');
+  setTimeout(() => $('#toast').classList.remove('show'), 2600);
+};
+
+/* ---------- Assistant ---------- */
+const steps = [
+  { t: 'Compte', h: `<h2>Bienvenue sur Motflix 👋</h2><p>Créez le compte administrateur. Vous serez le seul à pouvoir modifier les réglages.</p>
+      <div class="field"><label>Nom d'utilisateur</label><input class="input" value="admin"></div>
+      <div class="field"><label>Mot de passe</label><input class="input" type="password" value="motdepasse"></div>` },
+  { t: 'Dossiers', h: `<h2>Où ranger vos médias ?</h2><p>Films, séries et livres seront rangés ici, chacun dans son dossier.</p>
+      <div class="field"><label>Dossier des médias</label><input class="input mono" value="/srv/motflix/data"></div>
+      <div class="hint ok">${icon('check')}<span><b>1,6 To libres</b> sur ce disque. Largement de quoi commencer.</span></div>` },
+  { t: 'VPN', h: `<h2>Voulez-vous utiliser un VPN ?</h2><p>Il masque votre adresse IP pendant les téléchargements. Vous pourrez changer d'avis plus tard.</p>
+      <div class="choice-cards" data-choice><button class="choice">${icon('globe')}<b>Sans VPN</b><span>Plus simple, rien à configurer.</span></button><button class="choice active">${icon('shield')}<b>Avec VPN</b><span>Recommandé. Votre IP reste privée.</span></button></div>
+      <div class="field"><label>Fournisseur</label><select class="input"><option>ProtonVPN</option><option>Mullvad</option><option>Private Internet Access</option><option>Autre (WireGuard)</option></select></div>
+      <div class="field"><label>Clé WireGuard</label><input class="input mono" type="password" value="xxxxxxxxxxxxxxxx"></div>
+      <div class="hint">${icon('info')}<span>Aucun port à ouvrir sur votre box : si votre VPN le permet, Motflix ouvre le port chez lui automatiquement.</span></div>` },
+  { t: 'Lecture', h: `<h2>Où allez-vous regarder ?</h2><p>Motflix ajoutera automatiquement chaque film et série à cet endroit.</p>
+      <div class="choice-cards" data-choice><button class="choice active">${icon('tv')}<b>Plex</b><span>Sur la télé, le téléphone, l'ordinateur.</span></button><button class="choice" disabled>${icon('logo')}<b>Motflix App</b><span>Bientôt disponible.</span></button></div>
+      <div class="field"><label>Code de liaison Plex</label><input class="input mono" placeholder="claim-xxxxxxxxxxxx"></div>
+      <div class="hint">${icon('info')}<span>Obtenez-le sur <b>plex.tv/claim</b> (valable 4 minutes).</span></div>` },
+  { t: 'Préférences', h: `<h2>Vos préférences</h2><p>Préremplies avec des valeurs conseillées. Tout reste modifiable dans les Réglages.</p>
+      <div class="field"><label>Langues, par ordre de préférence</label><div class="order-chips"><span class="badge accent">1. VF</span>›<span class="badge">2. MULTi</span>›<span class="badge">3. VO</span>›<span class="badge">4. VOSTFR</span></div></div>
+      <div class="field"><label>Qualité</label><div class="seg" data-seg><button>720p</button><button class="active">1080p</button><button>4K</button></div></div>
+      <div class="field"><label>Taille maximale d'un film</label><div class="input-unit"><input class="input num" value="4"><span class="dim">Go</span></div></div>` },
+  { t: 'Sites', h: `<h2>Sites d'indexation</h2><p>Les sites où Motflix cherchera les fichiers. Étape facultative : vous pouvez en ajouter plus tard.</p>
+      <label class="search" style="max-width:none;margin:0">${icon('search', 'ic ic-sm dim')}<input placeholder="Rechercher parmi plus de 500 sites…"></label>
+      <div class="hint">${icon('zap')}<span>Les sites protégés contre les robots sont gérés automatiquement par FlareSolverr.</span></div>` },
+  { t: 'Configuration', h: `<h2>On s'occupe du reste</h2><p>Motflix relie tous les outils entre eux. Ça prend quelques secondes.</p>
+      <div class="checklist" id="checklist">${[
+        'Démarrage du VPN et test de l\'adresse IP',
+        'Ouverture automatique du port',
+        'Connexion des sites aux Films, Séries et Livres',
+        'Ajout de qBittorrent dans chaque outil',
+        'Création des profils de langue et de qualité',
+        'Liaison avec Plex (Films, Séries)',
+        'Bibliothèques Audiobookshelf',
+      ].map(x => `<div><span class="st"></span>${x}</div>`).join('')}</div>` },
+];
+let wizIdx = 0;
+function renderWizard() {
+  $('#wizSteps').innerHTML = steps.map((s, i) => `<div class="wiz-step ${i < wizIdx ? 'done' : i === wizIdx ? 'current' : ''}"><i>${i < wizIdx ? icon('check', 'ic ic-sm') : i + 1}</i>${s.t}</div>`).join('');
+  $('#wizBody').innerHTML = steps[wizIdx].h;
+  $('#wizCount').textContent = `Étape ${wizIdx + 1} sur ${steps.length}`;
+  $('#wizPrev').style.visibility = wizIdx ? 'visible' : 'hidden';
+  $('#wizNext').textContent = wizIdx === steps.length - 1 ? 'Ouvrir le panel' : 'Continuer';
+  if (wizIdx === steps.length - 1) runChecklist();
+}
+function runChecklist() {
+  const items = $$('#checklist .st');
+  $('#wizNext').disabled = true;
+  items.forEach((st, i) => {
+    setTimeout(() => st.classList.add('spin'), i * 550);
+    setTimeout(() => { st.classList.remove('spin'); st.classList.add('ok'); st.innerHTML = icon('check'); }, i * 550 + 500);
+  });
+  setTimeout(() => $('#wizNext').disabled = false, items.length * 550 + 100);
+}
+$('#openWizard').onclick = () => { wizIdx = 0; renderWizard(); $('#wizard').classList.add('show'); closeMenu(); };
+$('#wizPrev').onclick = () => { if (wizIdx > 0) { wizIdx--; renderWizard(); } };
+$('#wizNext').onclick = () => {
+  if (wizIdx < steps.length - 1) { wizIdx++; renderWizard(); }
+  else { $('#wizard').classList.remove('show'); go('dashboard'); }
+};
+$('#wizard').addEventListener('click', e => {
+  if (e.target.id === 'wizard') $('#wizard').classList.remove('show');
+  const c = e.target.closest('[data-choice] .choice');
+  if (c && !c.disabled) $$('.choice', c.parentElement).forEach(x => x.classList.toggle('active', x === c));
+});
+$('[data-choice]').addEventListener('click', e => {
+  const c = e.target.closest('.choice');
+  if (c && !c.disabled) { $$('.choice', c.parentElement).forEach(x => x.classList.toggle('active', x === c)); dirty(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { addModal.classList.remove('show'); $('#wizard').classList.remove('show'); closeMenu(); }
+});
+</script>
+</body>
+</html>

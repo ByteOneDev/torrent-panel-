@@ -1,0 +1,8 @@
+# Plex sur Linux : réseau de l'hôte, pour que la télé trouve le serveur toute seule.
+services:
+  plex:
+    network_mode: host
+    # Transcodage matériel (processeur Intel/AMD avec iGPU) : décommenter.
+    # devices:
+    #   - /dev/dri:/dev/dri
+
