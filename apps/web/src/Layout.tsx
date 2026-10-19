@@ -1,0 +1,140 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  BookOpen, Download, Film, Headphones, LayoutDashboard, LogOut, Menu, Moon, Server, Settings, Shield, Sun, Tv,
+  type LucideIcon,
+} from 'lucide-react';
+import { api } from './api.ts';
+import { useAuthState, useDashboard, useServices } from './hooks.ts';
+import { Logo } from './icons.tsx';
+
+interface NavEntry { to: string; label: string; icon: LucideIcon; soon?: boolean }
+
+const NAV: { label: string; items: NavEntry[] }[] = [
+  { label: 'Général', items: [
+    { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
+    { to: '/services', label: 'Services', icon: Server },
+  ] },
+  { label: 'Médias', items: [
+    { to: '/films', label: 'Films', icon: Film, soon: true },
+    { to: '/series', label: 'Séries', icon: Tv, soon: true },
+    { to: '/livres', label: 'Livres', icon: BookOpen, soon: true },
+    { to: '/livres-audio', label: 'Livres audio', icon: Headphones, soon: true },
+  ] },
+  { label: 'Activité', items: [{ to: '/telechargements', label: 'Téléchargements', icon: Download, soon: true }] },
+  { label: 'Configuration', items: [{ to: '/reglages', label: 'Réglages', icon: Settings }] },
+];
+
+function useTheme() {
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? 'dark');
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('motflix-theme', theme); } catch { /* navigation privée */ }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0c0f15' : '#f3f5f9');
+  }, [theme]);
+  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))] as const;
+}
+
+function ServerPill() {
+  const { data } = useServices();
+  const installed = data?.services.filter((s) => s.state !== 'missing') ?? [];
+  const online = installed.filter((s) => s.state === 'online').length;
+  const problems = installed.filter((s) => s.state === 'unhealthy' || s.state === 'stopped').length;
+  const dot = !data ? 'dot off' : problems ? 'dot err' : online < installed.length ? 'dot warn' : 'dot';
+  return (
+    <div className="server-pill">
+      <span className={dot} />
+      <div>
+        <b>Serveur Motflix</b>
+        <span>{data ? `${online} sur ${installed.length} services en ligne` : 'Connexion…'}</span>
+      </div>
+    </div>
+  );
+}
+
+function VpnBadge() {
+  const { data } = useDashboard();
+  if (!data?.vpn.enabled) return null;
+  const { connected, country } = data.vpn;
+  return (
+    <span className={`badge ${connected ? 'ok' : 'err'}`} title={connected ? 'VPN connecté' : 'VPN déconnecté'}>
+      <Shield className="ic ic-sm" />
+      <span className="hide-sm">{connected ? `VPN${country ? ` · ${country}` : ''}` : 'VPN coupé'}</span>
+    </span>
+  );
+}
+
+export function Layout({ title, children }: { title: string; children: ReactNode }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, toggleTheme] = useTheme();
+  const { data: auth } = useAuthState();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  useEffect(() => setMenuOpen(false), [location.pathname]);
+  useEffect(() => { document.title = `${title} · Motflix`; }, [title]);
+
+  async function logout() {
+    await api.logout().catch(() => {});
+    qc.clear();
+    navigate('/connexion');
+  }
+
+  const username = auth?.user?.username ?? '';
+
+  return (
+    <div className="app">
+      <aside className={`sidebar ${menuOpen ? 'open' : ''}`} aria-label="Navigation">
+        <div className="brand">
+          <div className="brand-logo"><Logo /></div>
+          <div className="brand-name">Motflix</div>
+        </div>
+        <ServerPill />
+        <nav className="nav">
+          {NAV.map((group) => (
+            <div key={group.label}>
+              <div className="nav-label">{group.label}</div>
+              {group.items.map(({ to, label, icon: Icon, soon }) =>
+                soon ? (
+                  <span key={to} className="nav-item soon" title="Arrive dans une prochaine version">
+                    <Icon className="ic" strokeWidth={1.8} />{label}<span className="count">bientôt</span>
+                  </span>
+                ) : (
+                  <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    <Icon className="ic" strokeWidth={1.8} />{label}
+                  </NavLink>
+                ),
+              )}
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-foot">
+          <div className="avatar">{username.slice(0, 1) || '?'}</div>
+          <div className="who"><b>{username}</b><span>Administrateur</span></div>
+          <button className="icon-btn sm" onClick={toggleTheme} title="Changer de thème" aria-label="Changer de thème">
+            {theme === 'dark' ? <Sun className="ic ic-sm" /> : <Moon className="ic ic-sm" />}
+          </button>
+          {auth?.authEnabled && (
+            <button className="icon-btn sm" onClick={logout} title="Se déconnecter" aria-label="Se déconnecter">
+              <LogOut className="ic ic-sm" />
+            </button>
+          )}
+        </div>
+      </aside>
+      {menuOpen && <div className="scrim" onClick={() => setMenuOpen(false)} />}
+
+      <div className="main">
+        <header className="topbar">
+          <button className="icon-btn menu-btn" onClick={() => setMenuOpen(true)} aria-label="Ouvrir le menu">
+            <Menu className="ic" />
+          </button>
+          <h1>{title}</h1>
+          <div className="right"><VpnBadge /></div>
+        </header>
+        <main className="content" key={location.pathname}>{children}</main>
+      </div>
+    </div>
+  );
+}

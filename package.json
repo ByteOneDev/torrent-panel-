@@ -1,0 +1,25 @@
+{
+  "name": "motflix",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Panel d'administration pour Radarr, Sonarr, Prowlarr, qBittorrent, LazyLibrarian, Audiobookshelf et Plex",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node_modules/.bin/concurrently -n server,web -c blue,magenta \"npm run dev -w @motflix/server\" \"npm run dev -w @motflix/web\"",
+    "build": "npm run build -w @motflix/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "docker:build": "docker build -t motflix-panel:dev ."
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "typescript": "^7.0.2"
+  }
+}

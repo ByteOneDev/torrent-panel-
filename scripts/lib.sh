@@ -122,6 +122,16 @@ lan_ip() {
 
 gen_hex() { openssl rand -hex "${1:-16}"; }
 
+# Vrai si un programme écoute déjà sur ce port local.
+port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
+# Premier port libre à partir de celui donné (8080, 8081…).
+free_port() {
+  local p=$1
+  while port_busy "$p"; do p=$((p + 1)); done
+  echo "$p"
+}
+
 # ─── Fichier .env ────────────────────────────────────────────────────────
 # Les valeurs sont écrites entre apostrophes : lues telles quelles par Docker Compose.
 # Le fichier n'est jamais « sourcé » par bash, on le lit avec env_get.

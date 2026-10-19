@@ -1,0 +1,13 @@
+{
+  "name": "Motflix",
+  "short_name": "Motflix",
+  "description": "Panel d'administration de vos films, séries et livres",
+  "lang": "fr",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0f15",
+  "theme_color": "#0c0f15",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

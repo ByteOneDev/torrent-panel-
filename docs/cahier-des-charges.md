@@ -57,7 +57,9 @@ Motflix est un **panel d'administration web** qui réunit dans une seule interfa
 
 ## 4. Utilisateurs et rôles
 
-- **Un seul administrateur**, créé dans l'assistant.
+- **Pas de compte par défaut** : le panel s'ouvre directement, en administrateur, sans mot de passe.
+- **Comptes activables** dans Réglages › Utilisateurs : on définit alors l'identifiant et le mot de passe de
+  l'administrateur, et le panel exige une connexion. Désactivables de la même façon.
 - Les deux autres personnes regardent via **Plex sur la télé** : elles n'ont pas besoin de compte sur le panel.
 - **Option « Utilisateurs et rôles »** (Réglages → Utilisateurs), **désactivée par défaut**, sur le modèle de Plex :
 
@@ -197,7 +199,7 @@ Les conteneurs ont `restart: unless-stopped` en filet de sécurité.
 
 Affiché au premier lancement du panel. Chaque étape peut être refaite plus tard dans les Réglages.
 
-1. **Compte administrateur** : nom, mot de passe.
+1. **Bienvenue** : présentation (aucun compte demandé ; ils restent activables dans les Réglages).
 2. **Dossiers** : confirmation du dossier des médias, espace libre affiché.
 3. **VPN** : Sans VPN / Avec VPN → fournisseur (liste Gluetun), identifiants (WireGuard ou OpenVPN), bouton **Tester** qui affiche l'IP vue de l'extérieur.
 4. **Lecture** : Plex (code de liaison depuis `plex.tv/claim`) ou Motflix App (grisé, « bientôt »).
@@ -319,7 +321,9 @@ Options :
 
 - Accès local uniquement. Seuls le panel, Plex et Audiobookshelf sont exposés au réseau de la maison.
 - Les clés API des outils sont générées à l'installation et **ne quittent jamais le serveur** : le navigateur parle uniquement au backend Motflix.
-- Mots de passe hachés (argon2), session par cookie `httpOnly`.
+- Sans compte (par défaut), toute personne sur le réseau local peut ouvrir le panel : c'est un choix assumé pour un
+  usage familial. Avec les comptes activés : mots de passe hachés (argon2), session par cookie `httpOnly`,
+  limite de tentatives de connexion.
 - Accès à Docker via `socket-proxy`, limité aux opérations nécessaires (état, logs, démarrage/arrêt, statistiques).
 - Identifiants VPN dans `.env`, lisible uniquement par le propriétaire (permissions `600`).
 
@@ -384,7 +388,7 @@ Si ces contenus ne remontent pas via les indexeurs, on teste la chaîne qBittorr
 | Phase | Contenu | Terminée quand |
 |---|---|---|
 | **0** | `docker-compose.yml`, `install.sh`, `start.sh`, démarrage automatique | Un film libre va de la recherche jusqu'à Plex, configuré à la main ; redémarrage OK |
-| **1** | Squelette du panel : connexion, tableau de bord, services (état, ressources, logs, actions) | Les services se pilotent depuis le panel |
+| **1** | Squelette du panel : connexion, tableau de bord, services (état, ressources, logs, actions) | Les services se pilotent depuis le panel — ✅ livré |
 | **2** | Assistant + liaison automatique des services | Installation neuve → tout fonctionne sans ouvrir aucun autre outil |
 | **3** | **Réglages unifiés** (§10) | Langue, qualité, taille et téléchargement se règlent uniquement depuis le panel |
 | **4** | Recherche, bibliothèque, téléchargements | Ajouter et suivre un média sans quitter le panel |

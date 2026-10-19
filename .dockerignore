@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.env*
+!apps/server/.env.dev.example
+apps/server/data
+.git
+docs
+docker
+scripts
+*.md

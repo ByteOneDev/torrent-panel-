@@ -35,6 +35,54 @@ networks:
           gateway: 172.31.250.1
 
 services:
+  # ─── Panel ───────────────────────────────────────────────────────────
+  motflix:
+    image: motflix-panel:${MOTFLIX_VERSION}
+    build:
+      context: ${MOTFLIX_SRC}   # dossier du projet, construit par install.sh / update.sh
+    container_name: motflix-panel
+    restart: unless-stopped
+    user: ${PUID}:${PGID}   # la base du panel appartient à l'utilisateur, comme le reste
+    environment:
+      TZ: ${TZ}
+      DOCKER_HOST: http://socket-proxy:2375
+      COMPOSE_PROJECT: motflix
+      TOOLS_BIND: ${TOOLS_BIND}
+      RADARR_API_KEY: ${RADARR_API_KEY}
+      SONARR_API_KEY: ${SONARR_API_KEY}
+      PROWLARR_API_KEY: ${PROWLARR_API_KEY}
+      LAZYLIBRARIAN_API_KEY: ${LAZYLIBRARIAN_API_KEY}
+      QBITTORRENT_USER: ${QBITTORRENT_USER}
+      QBITTORRENT_PASSWORD: ${QBITTORRENT_PASSWORD}
+    volumes:
+      - ./config/motflix:/config
+      - ${DATA_DIR}:/data:ro
+    ports:
+      - ${PANEL_PORT:-8080}:8080   # visible sur le réseau local
+    depends_on: [socket-proxy]
+    networks: [motflix]
+
+  # Accès à Docker limité à ce dont le panel a besoin : lire l'état, les logs et
+  # les statistiques des conteneurs, et les démarrer / arrêter / redémarrer.
+  # Création et suppression de conteneurs, exec, images, volumes : refusés.
+  socket-proxy:
+    image: lscr.io/linuxserver/socket-proxy:latest
+    container_name: motflix-socket-proxy
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/run]
+    environment:
+      CONTAINERS: 1
+      ALLOW_START: 1
+      ALLOW_STOP: 1
+      ALLOW_RESTARTS: 1
+      ALLOW_LOGS: 1
+      POST: 0
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [motflix]
+
   # ─── VPN (profil vpn) ────────────────────────────────────────────────
   gluetun:
     image: qmcgaw/gluetun:v3

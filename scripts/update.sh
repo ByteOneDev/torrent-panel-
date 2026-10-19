@@ -10,7 +10,10 @@ delegate_to_install update.sh "$@"
 ensure_docker_running
 
 step "Téléchargement des nouvelles versions"
-dc pull
+dc pull --ignore-buildable
+
+step "Reconstruction du panel"
+dc build --pull motflix
 
 step "Redémarrage des services mis à jour"
 dc up -d --remove-orphans

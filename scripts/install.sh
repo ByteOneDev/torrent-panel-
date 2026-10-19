@@ -16,6 +16,7 @@ OS=$(detect_os)
 INSTALL_DIR=''
 DATA_DIR=''
 EXPOSE_TOOLS=0
+PANEL_PORT=''
 AUTOSTART=1
 START=1
 RECONFIGURE=0
@@ -32,6 +33,7 @@ Usage : $0 [options]
   --dir CHEMIN        Dossier d'installation
                       (défaut : ~/Motflix sur macOS, /opt/motflix sur Linux)
   --data-dir CHEMIN   Dossier des médias et téléchargements (défaut : <dossier>/data)
+  --port PORT         Port du panel sur le réseau local (défaut : 8080)
   --expose-tools      Rend les interfaces des outils joignables depuis le réseau local
                       (par défaut : seulement depuis cette machine)
   --no-vpn            Ne pas proposer de VPN
@@ -49,6 +51,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --dir)          need_arg "$@"; INSTALL_DIR=$2; shift 2 ;;
     --data-dir)     need_arg "$@"; DATA_DIR=$2; shift 2 ;;
+    --port)         need_arg "$@"; PANEL_PORT=$2; shift 2 ;;
     --expose-tools) EXPOSE_TOOLS=1; shift ;;
     --no-vpn)       NO_VPN=1; shift ;;
     --no-plex)      NO_PLEX=1; shift ;;
@@ -63,6 +66,7 @@ done
 export ASSUME_YES
 
 [ "$OS" != unknown ] || die "Système non pris en charge : $(uname -s). Motflix fonctionne sur macOS et Linux."
+case "$PANEL_PORT" in ''|*[!0-9]*) [ -z "$PANEL_PORT" ] || die "Port invalide : $PANEL_PORT" ;; esac
 [ "$(id -u)" -ne 0 ] || die "Lancez ce script avec votre utilisateur habituel, sans sudo (il sera demandé si besoin)."
 
 expand_path() {
@@ -357,6 +361,15 @@ ask_plex() {
   ask_yn "Installer Plex pour regarder sur la télé ?" o || PLEX_ENABLED=0
 }
 
+# Port du panel : celui demandé, sinon 8080 ou le premier port libre après lui.
+choose_panel_port() {
+  local p
+  if [ -n "$PANEL_PORT" ]; then echo "$PANEL_PORT"; return; fi
+  p=$(free_port 8080)
+  [ "$p" != 8080 ] && warn "Le port 8080 est déjà utilisé : le panel utilisera le port $p." >&2
+  echo "$p"
+}
+
 step "Configuration"
 if [ "$HAS_CONFIG" = 1 ]; then
   ok "Configuration existante conservée (--reconfigure pour la refaire)"
@@ -364,6 +377,11 @@ if [ "$HAS_CONFIG" = 1 ]; then
   [ "$NO_PLEX" = 1 ] && warn "--no-plex ignoré : utilisez --reconfigure pour changer ce choix."
   env_set "$ENV_FILE" MOTFLIX_VERSION "$MOTFLIX_VERSION"
   env_set "$ENV_FILE" DOCKER_RUNTIME "$DOCKER_RUNTIME"
+  # Ajouts des versions récentes, absents des installations plus anciennes.
+  env_set "$ENV_FILE" MOTFLIX_SRC "$REPO_DIR"
+  if [ -n "$PANEL_PORT" ] || [ -z "$(env_get "$ENV_FILE" PANEL_PORT)" ]; then
+    env_set "$ENV_FILE" PANEL_PORT "$(choose_panel_port)"
+  fi
 else
   ask_vpn
   ask_plex
@@ -395,6 +413,8 @@ EOF
     env_set "$tmp_env" PGID "$(id -g)"
     env_set "$tmp_env" TZ "$(detect_tz)"
     env_set "$tmp_env" DATA_DIR "$DATA_DIR"
+    env_set "$tmp_env" MOTFLIX_SRC "$REPO_DIR"
+    env_set "$tmp_env" PANEL_PORT "$(choose_panel_port)"
     env_set "$tmp_env" TOOLS_BIND "$bind"
     env_set "$tmp_env" TORRENT_PORT 6881
     env_set "$tmp_env" RADARR_API_KEY "$RADARR_API_KEY"
@@ -431,7 +451,7 @@ fi
 # Écrite seulement au premier lancement : les outils reprennent ensuite la main.
 step "Préconfiguration des outils"
 CONFIG_DIR="$INSTALL_DIR/config"
-mkdir -p "$CONFIG_DIR"/{radarr,sonarr,prowlarr,lazylibrarian,qbittorrent/qBittorrent,gluetun,plex} \
+mkdir -p "$CONFIG_DIR"/{motflix,radarr,sonarr,prowlarr,lazylibrarian,qbittorrent/qBittorrent,gluetun,plex} \
          "$CONFIG_DIR/audiobookshelf/config" "$CONFIG_DIR/audiobookshelf/metadata"
 
 seed_arr() {
@@ -560,7 +580,11 @@ if [ "$START" = 0 ]; then
 else
   step "Téléchargement des services (plusieurs Go la première fois, patience)"
   docker_detect_access || die "Docker ne répond plus."
-  dc pull
+  dc pull --ignore-buildable
+
+  step "Construction du panel"
+  dc build motflix
+  ok "Panel construit"
 
   # Le code Plex expire en 4 minutes : on le demande juste avant de démarrer.
   case "$INSTALL_PROFILES" in
@@ -580,6 +604,9 @@ fi
 
 # ─── Résumé ──────────────────────────────────────────────────────────────
 printf '%s  Installation terminée.%s\n\n' "$C_BOLD$C_GREEN" "$C_RESET"
+info "Ouvrez le panel : ${C_BOLD}http://$(lan_ip):$(env_get "$ENV_FILE" PANEL_PORT)${C_RESET}"
+info "(au premier accès, il vous demande de créer le compte administrateur)"
+info ""
 qbt_pass=$(env_get "$ENV_FILE" QBITTORRENT_PASSWORD)
 if [ -n "$qbt_pass" ]; then
   info "qBittorrent : utilisateur ${C_BOLD}admin${C_RESET}, mot de passe ${C_BOLD}$qbt_pass${C_RESET}"

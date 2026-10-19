@@ -13,3 +13,7 @@ logs/
 # Plus tard (panel)
 node_modules/
 dist/
+
+# Panel en développement
+.env.dev
+apps/server/data/

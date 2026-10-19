@@ -1,0 +1,10 @@
+{
+  "name": "@motflix/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Types partagés entre le serveur et l'interface (types uniquement, aucun code exécuté).",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

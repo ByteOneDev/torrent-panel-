@@ -24,8 +24,12 @@ ok "Conteneurs lancés"
 profiles=",$(env_get "$ENV_FILE" COMPOSE_PROFILES),"
 has_profile() { case "$profiles" in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 
+panel_port=$(env_get "$ENV_FILE" PANEL_PORT)
+panel_port=${panel_port:-8080}
+
 # nom|url  (toute réponse HTTP compte : le service écoute)
-checks="Films (Radarr)|http://127.0.0.1:7878/ping
+checks="Panel Motflix|http://127.0.0.1:$panel_port/api/health
+Films (Radarr)|http://127.0.0.1:7878/ping
 Séries (Sonarr)|http://127.0.0.1:8989/ping
 Sites d'indexation (Prowlarr)|http://127.0.0.1:9696/ping
 Anti-bot (FlareSolverr)|http://127.0.0.1:8191/
@@ -86,6 +90,8 @@ else
   printf '%s! Motflix a démarré, mais %s service(s) ne répondent pas encore.%s\n' "$C_BOLD$C_YELLOW" "$failed" "$C_RESET"
   printf '  Voir : docker compose --project-directory "%s" logs <service>\n\n' "$INSTALL_DIR"
 fi
+printf '  %sPanel Motflix   http://%s:%s%s\n\n' "$C_BOLD" "$ip" "$panel_port" "$C_RESET"
+printf '  %sInterfaces d'"'"'origine :%s\n' "$C_DIM" "$C_RESET"
 printf '  Films           http://%s:7878\n' "$host"
 printf '  Séries          http://%s:8989\n' "$host"
 printf '  Indexeurs       http://%s:9696\n' "$host"

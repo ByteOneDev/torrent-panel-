@@ -6,8 +6,8 @@ Panel d'administration web qui réunit les outils de téléchargement et de gest
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Maquette : [docs/maquette/index.html](docs/maquette/index.html)
 
-**État : phase 0** — la stack de services s'installe et démarre seule. Le panel arrive en phase 1 ;
-en attendant, chaque outil se règle dans sa propre interface.
+**État : phase 1** — la stack s'installe et démarre seule, et le panel permet de voir l'état de tous les services (CPU, mémoire, logs en direct) et de les démarrer, arrêter ou redémarrer.
+Les réglages unifiés arrivent en phase 3 ; en attendant, chaque outil se règle dans sa propre interface.
 
 ---
 
@@ -66,6 +66,7 @@ Depuis le dossier d'installation :
 
 | Service | Rôle | Adresse |
 |---|---|---|
+| **Motflix** | **Panel d'administration** | **http://\<ip\>:8080** |
 | Radarr | Films | http://localhost:7878 |
 | Sonarr | Séries | http://localhost:8989 |
 | Prowlarr | Sites d'indexation | http://localhost:9696 |
@@ -87,7 +88,54 @@ data/
 └── media/     films/ series/ livres/ livres-audio/   ← bibliothèque rangée (hardlinks : pas de double espace)
 ```
 
-## Scripts de développement
+## Le panel
+
+Après l'installation, ouvrez **http://\<ip-de-la-machine\>:8080** (le port est affiché par `start.sh` ;
+s'il est déjà pris, l'installeur choisit le suivant de libre, ou utilisez `--port`).
+Le panel s'ouvre directement, sans mot de passe. Pour en exiger un, activez les comptes dans
+**Réglages › Utilisateurs et rôles** (mot de passe oublié : `docker exec motflix-panel node src/reset-auth.ts`).
+
+| Page | Contenu |
+|---|---|
+| Tableau de bord | Téléchargements, stockage, VPN, bibliothèque, état de chaque service, activité récente |
+| Services | Détail d'un service : démarrer / redémarrer / arrêter, CPU et mémoire, console de logs en direct |
+| Réglages | Utilisateurs : activer ou désactiver les comptes (les autres sections arrivent en phase 3) |
+
+Le panel parle à Docker à travers `socket-proxy`, qui n'autorise que la lecture de l'état, des logs et des
+statistiques, et le démarrage / arrêt des conteneurs. Les clés API des outils ne quittent jamais le serveur.
+
+## Développement
+
+Prérequis : Node.js 24 ou plus récent, et une installation Motflix qui tourne (pour avoir des services à piloter).
+
+```bash
+npm install
+```
+
+```bash
+cp apps/server/.env.dev.example apps/server/.env.dev
+```
+
+Complétez `apps/server/.env.dev` avec les clés de `~/Motflix/.env`, puis :
+
+```bash
+npm run dev
+```
+
+L'interface est sur http://localhost:5173 (Vite, rechargement à chaud), l'API sur le port indiqué dans `.env.dev`.
+
+| Commande | Rôle |
+|---|---|
+| `npm test` | Tests du serveur (Vitest) |
+| `npm run typecheck` | Vérification des types, serveur et interface |
+| `npm run build` | Compile l'interface dans `apps/web/dist` |
+| `npm run docker:build` | Construit l'image du panel |
+
+> Le dossier de ce projet contient « : » dans son nom. C'est sans conséquence pour Motflix, mais les scripts npm
+> appellent les outils par leur chemin relatif (`../../node_modules/.bin/…`), car un « : » dans le `PATH` casse
+> la résolution des commandes.
+
+### Scripts de liaison
 
 En attendant l'assistant (phase 2), deux scripts font les liaisons par API :
 

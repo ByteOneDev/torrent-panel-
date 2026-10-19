@@ -6,3 +6,6 @@ services:
     ports:
       - 32400:32400
 
+  motflix:
+    environment:
+      PLEX_URL: http://plex:32400

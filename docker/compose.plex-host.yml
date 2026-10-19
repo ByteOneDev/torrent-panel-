@@ -6,3 +6,9 @@ services:
     # devices:
     #   - /dev/dri:/dev/dri
 
+  # Plex n'est pas sur le réseau Docker : le panel le joint via l'hôte.
+  motflix:
+    environment:
+      PLEX_URL: http://host.docker.internal:32400
+    extra_hosts:
+      - host.docker.internal:host-gateway
