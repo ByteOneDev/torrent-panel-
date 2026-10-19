@@ -13,6 +13,8 @@ import { createLogParser, DockerClient, DockerError } from './docker.ts';
 import { ServiceError, ServiceManager } from './services.ts';
 import { Settings } from './settings.ts';
 import { registerSetup } from './setup/routes.ts';
+import { serviceAccess } from './access.ts';
+import { registerSettings } from './settings-routes.ts';
 
 export interface AppDeps {
   config: Config;
@@ -69,7 +71,16 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
 
   app.get('/api/dashboard', () => dashboard.get());
 
-  registerSetup(app, { config, settings: new Settings(db), services });
+  const settings = new Settings(db);
+  registerSetup(app, { config, settings, services });
+  registerSettings(app, { config, settings, services });
+
+  app.get<{ Params: { id: string } }>('/api/services/:id/access', async (req, reply) => {
+    const access = serviceAccess(req.params.id, config, settings);
+    if (!access) return reply.code(404).send({ error: "Ce service n'a pas d'interface à ouvrir." });
+    reply.header('Cache-Control', 'no-store');
+    return access;
+  });
 
   // Logs en direct, en Server-Sent Events.
   app.get<{ Params: { id: string }; Querystring: { tail?: string } }>('/api/services/:id/logs', async (req, reply) => {

@@ -234,7 +234,7 @@ Affiché au premier lancement du panel. Chaque étape peut être refaite plus ta
 ### 9.2 Services (style Minestrator)
 - Détail d'un service : état, durée de fonctionnement, boutons Démarrer / Redémarrer / Arrêter, graphiques CPU et RAM.
 - **Console de logs en direct**, avec filtre et niveau (info, avertissement, erreur).
-- Lien « Ouvrir l'interface d'origine » (mode avancé).
+- Lien « Ouvrir l'interface d'origine », avec l'identifiant et le mot de passe à utiliser (copiables) quand l'outil en demande un.
 
 ### 9.3 Bibliothèque (Films, Séries, Livres, Livres audio)
 - Grille d'affiches, filtres (Disponible, En téléchargement, Manquant), badges langue et qualité.
@@ -395,7 +395,7 @@ Si ces contenus ne remontent pas via les indexeurs, on teste la chaîne qBittorr
 | **0** | `docker-compose.yml`, `install.sh`, `start.sh`, démarrage automatique | Un film libre va de la recherche jusqu'à Plex, configuré à la main ; redémarrage OK |
 | **1** | Squelette du panel : connexion, tableau de bord, services (état, ressources, logs, actions) | Les services se pilotent depuis le panel — ✅ livré |
 | **2** | Assistant + liaison automatique des services | Installation neuve → tout fonctionne sans ouvrir aucun autre outil — ✅ livré |
-| **3** | **Réglages unifiés** (§10) | Langue, qualité, taille et téléchargement se règlent uniquement depuis le panel |
+| **3** | **Réglages unifiés** (§10) | Langue, qualité, taille et téléchargement se règlent uniquement depuis le panel — ✅ livré |
 | **4** | Recherche, bibliothèque, téléchargements | Ajouter et suivre un média sans quitter le panel |
 | **5** | Rôles, PWA, finitions, `install.ps1` | v1 livrée |
 | Plus tard | Application Motflix (Tauri) | — |

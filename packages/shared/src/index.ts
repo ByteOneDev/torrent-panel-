@@ -43,6 +43,13 @@ export interface LogLine {
   text: string;
 }
 
+/** Comment se connecter à l'interface d'origine d'un outil. */
+export interface ServiceAccess {
+  username: string | null;
+  password: string | null;
+  note: string;
+}
+
 export interface ServicesResponse {
   services: Service[];
   toolsExposed: boolean;
@@ -189,6 +196,41 @@ export interface IndexerAddResult {
   name: string;
   ok: boolean;
   message: string;
+}
+
+// ─── Réglages ────────────────────────────────────────────────────────────
+
+/** Réglages de téléchargement (qBittorrent), en unités humaines. */
+export interface DownloadSettings {
+  /** Mo/s ; 0 = illimité. */
+  maxDownloadMBps: number;
+  maxUploadMBps: number;
+  /** Vitesse réduite sur une plage horaire. */
+  scheduleEnabled: boolean;
+  scheduleFrom: string; // HH:MM
+  scheduleTo: string;   // HH:MM
+  altDownloadMBps: number;
+  altUploadMBps: number;
+  maxActiveDownloads: number;
+  /** Arrêter de partager après ce ratio (null = pas de limite). */
+  seedRatio: number | null;
+  /** … ou après ce nombre de jours (null = pas de limite). */
+  seedDays: number | null;
+  /** Retirer le torrent une fois le partage terminé (le fichier reste dans la bibliothèque). */
+  removeAfterSeeding: boolean;
+}
+
+export interface ConfiguredIndexer {
+  id: number;
+  name: string;
+  enabled: boolean;
+  flaresolverr: boolean;
+  language: string;
+}
+
+export interface ApplyResult {
+  ok: boolean;
+  detail: string;
 }
 
 export interface PlexPin {

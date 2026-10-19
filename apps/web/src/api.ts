@@ -1,5 +1,5 @@
 import type {
-  AuthState, DashboardResponse, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
+  ApplyResult, AuthState, ConfiguredIndexer, DashboardResponse, DownloadSettings, ServiceAccess, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
   ServicesResponse, SetupInfo, SetupRun, VpnSettings,
 } from '@motflix/shared';
 
@@ -11,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'DELETE', path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -38,6 +38,18 @@ export const api = {
   services: () => call<ServicesResponse>('GET', '/api/services'),
   serviceAction: (id: string, action: ServiceAction) => call<{ ok: true }>('POST', `/api/services/${id}/${action}`, {}),
   dashboard: () => call<DashboardResponse>('GET', '/api/dashboard'),
+  serviceAccess: (id: string) => call<ServiceAccess>('GET', `/api/services/${id}/access`),
+
+  settings: {
+    preferences: () => call<MediaPreferences>('GET', '/api/settings/preferences'),
+    savePreferences: (p: MediaPreferences) => call<ApplyResult>('POST', '/api/settings/preferences', p),
+    downloads: () => call<DownloadSettings>('GET', '/api/settings/downloads'),
+    saveDownloads: (d: DownloadSettings) => call<DownloadSettings>('POST', '/api/settings/downloads', d),
+    indexers: () => call<ConfiguredIndexer[]>('GET', '/api/settings/indexers'),
+    setIndexer: (id: number, enabled: boolean) => call<{ ok: true }>('POST', `/api/settings/indexers/${id}`, { enabled }),
+    deleteIndexer: (id: number) => call<{ ok: true }>('DELETE', `/api/settings/indexers/${id}`),
+    applyPlex: () => call<ApplyResult>('POST', '/api/settings/plex', {}),
+  },
 
   setup: {
     info: () => call<SetupInfo>('GET', '/api/setup'),

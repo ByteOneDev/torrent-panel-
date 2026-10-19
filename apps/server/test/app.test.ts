@@ -138,6 +138,17 @@ describe('services', () => {
   });
 });
 
+describe('identifiants des interfaces', () => {
+  it("donne ceux de qBittorrent et indique qu'il n'en faut pas pour Radarr", async () => {
+    const radarr = await app.inject({ method: 'GET', url: '/api/services/radarr/access' });
+    expect(radarr.json()).toMatchObject({ username: null, password: null });
+    const qbt = await app.inject({ method: 'GET', url: '/api/services/qbittorrent/access' });
+    expect(qbt.json().username).toBe('admin');
+    expect(qbt.headers['cache-control']).toBe('no-store');
+    expect((await app.inject({ method: 'GET', url: '/api/services/gluetun/access' })).statusCode).toBe(404);
+  });
+});
+
 describe('deriveState', () => {
   const radarr = findEntry('radarr')!;
   const running = (startedMsAgo: number, health?: 'starting' | 'healthy' | 'unhealthy'): ContainerInspect => ({

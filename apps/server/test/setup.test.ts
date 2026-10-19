@@ -115,3 +115,32 @@ describe('agent VPN', () => {
     expect(parseResult('rien')).toBeNull();
   });
 });
+
+describe('réglages de téléchargement', () => {
+  const base = {
+    dl_limit: 0, up_limit: 2 * 1024 * 1024, alt_dl_limit: 1024 * 1024, alt_up_limit: 512 * 1024,
+    scheduler_enabled: true, schedule_from_hour: 9, schedule_from_min: 0, schedule_to_hour: 18, schedule_to_min: 30,
+    scheduler_days: 0, max_active_downloads: 3, max_ratio_enabled: true, max_ratio: 1,
+    max_seeding_time_enabled: true, max_seeding_time: 4320, max_ratio_act: 1,
+  };
+
+  it('traduit qBittorrent en unités humaines, et retour', async () => {
+    const { fromQbt, toQbt } = await import('../src/setup/downloads.ts');
+    const human = fromQbt(base);
+    expect(human).toEqual({
+      maxDownloadMBps: 0, maxUploadMBps: 2, scheduleEnabled: true, scheduleFrom: '09:00', scheduleTo: '18:30',
+      altDownloadMBps: 1, altUploadMBps: 0.5, maxActiveDownloads: 3, seedRatio: 1, seedDays: 3, removeAfterSeeding: true,
+    });
+    expect(toQbt(human)).toEqual(base);
+    expect(toQbt({ ...human, seedRatio: null, seedDays: null, removeAfterSeeding: false }))
+      .toMatchObject({ max_ratio_enabled: false, max_ratio: -1, max_seeding_time_enabled: false, max_ratio_act: 0 });
+  });
+
+  it('refuse les valeurs invalides', async () => {
+    const { fromQbt, toQbt } = await import('../src/setup/downloads.ts');
+    const human = fromQbt(base);
+    expect(() => toQbt({ ...human, scheduleFrom: '25:00' })).toThrow(/heure invalide/);
+    expect(() => toQbt({ ...human, maxActiveDownloads: 0 })).toThrow();
+    expect(() => toQbt({ ...human, maxDownloadMBps: -1 })).toThrow();
+  });
+});

@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
-import { Pause, Play, Search, Terminal } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Check, Copy, Eye, EyeOff, KeyRound, Pause, Play, Search, Terminal } from 'lucide-react';
 import type { LogLevel, Service } from '@motflix/shared';
+import { api } from '../api.ts';
 import { bytes, clock, percent, since } from '../format.ts';
 import { serviceHistory, useLogs, useServices, type LogStatus } from '../hooks.ts';
 import { ServiceIcon } from '../icons.tsx';
 import { Layout } from '../Layout.tsx';
-import { OriginalUiLink, ServiceActions, Spark, StateBadge, stateDotClass } from '../ui.tsx';
+import { OriginalUiLink, ServiceActions, Spark, StateBadge, stateDotClass, useToast } from '../ui.tsx';
 
 const LEVEL_FILTERS: { id: 'all' | LogLevel; label: string }[] = [
   { id: 'all', label: 'Tout' },
@@ -80,6 +82,62 @@ function Console({ service }: { service: Service }) {
   );
 }
 
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [done, setDone] = useState(false);
+  const toast = useToast();
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setDone(true);
+      setTimeout(() => setDone(false), 1500);
+    } catch {
+      toast({ title: 'Copie impossible', detail: 'Sélectionnez le texte à la main.', error: true });
+    }
+  }
+  return (
+    <button type="button" className="btn btn-ghost btn-sm" onClick={copy} title={`Copier ${label}`} aria-label={`Copier ${label}`}>
+      {done ? <Check className="ic ic-sm" /> : <Copy className="ic ic-sm" />}
+    </button>
+  );
+}
+
+/** Identifiant et mot de passe de l'interface d'origine, à côté du bouton pour l'ouvrir. */
+export function AccessInfo({ service }: { service: Service }) {
+  const { data } = useQuery({ queryKey: ['access', service.id], queryFn: () => api.serviceAccess(service.id), staleTime: 60_000 });
+  const [show, setShow] = useState(false);
+  if (!service.ui || !data) return null;
+  const needsLogin = data.username || data.password;
+  return (
+    <div className="access">
+      <div className="access-head"><KeyRound className="ic ic-sm" /><b>Connexion à l'interface d'origine</b></div>
+      {needsLogin ? (
+        <div className="access-grid">
+          {data.username && (
+            <div className="access-field">
+              <span className="dim">Nom d'utilisateur</span>
+              <div className="secret"><code className="mono">{data.username}</code><CopyButton value={data.username} label="le nom d'utilisateur" /></div>
+            </div>
+          )}
+          {data.password && (
+            <div className="access-field">
+              <span className="dim">Mot de passe</span>
+              <div className="secret">
+                <code className="mono">{show ? data.password : '•'.repeat(Math.min(data.password.length, 14))}</code>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShow((v) => !v)}
+                  aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} title={show ? 'Masquer' : 'Afficher'}>
+                  {show ? <EyeOff className="ic ic-sm" /> : <Eye className="ic ic-sm" />}
+                </button>
+                <CopyButton value={data.password} label="le mot de passe" />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+      <span className="dim access-note">{data.note}</span>
+    </div>
+  );
+}
+
 function ServiceDetail({ service, toolsExposed }: { service: Service; toolsExposed: boolean }) {
   const h = serviceHistory(service.id);
   const [, tick] = useState(0);
@@ -108,6 +166,7 @@ function ServiceDetail({ service, toolsExposed }: { service: Service; toolsExpos
           <div className="row-main"><span>{service.description}</span></div>
           {service.containerName && <span className="dim mono hide-sm" style={{ fontSize: 12 }}>{service.containerName}</span>}
         </div>
+        <AccessInfo service={service} />
       </div>
 
       {service.state === 'missing' ? (

@@ -15,7 +15,7 @@ export function generatePassword(): string {
   return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8)}`;
 }
 
-function PlexCard({ info }: { info: SetupInfo }) {
+export function PlexCard({ info, onLinked }: { info: SetupInfo; onLinked?: () => void }) {
   const [waiting, setWaiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const popup = useRef<Window | null>(null);
@@ -39,6 +39,7 @@ function PlexCard({ info }: { info: SetupInfo }) {
         if (s.linked) {
           popup.current?.close();
           await qc.invalidateQueries({ queryKey: ['setup'] });
+          onLinked?.();
           return;
         }
         if (popup.current?.closed && Date.now() - started > 10_000) {

@@ -6,9 +6,9 @@ Panel d'administration web qui réunit les outils de téléchargement et de gest
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Maquette : [docs/maquette/index.html](docs/maquette/index.html)
 
-**État : phase 2** — la stack s'installe et démarre seule ; au premier accès, un assistant relie tous les outils
-entre eux (téléchargement, sites, langues, Plex, livres audio, VPN). Le panel montre ensuite l'état de chaque
-service. Les réglages détaillés (langue, qualité, partage…) arrivent en phase 3.
+**État : phase 3** — la stack s'installe et démarre seule ; au premier accès, un assistant relie tous les outils
+entre eux. Ensuite, tout se règle depuis le panel (langue, qualité, téléchargements, partage, VPN, sites, Plex,
+comptes), sans ouvrir les outils. La recherche et la bibliothèque arrivent en phase 4.
 
 ---
 
@@ -104,8 +104,8 @@ Le panel s'ouvre directement, sans mot de passe. Pour en exiger un, activez les 
 | Page | Contenu |
 |---|---|
 | Tableau de bord | Téléchargements, stockage, VPN, bibliothèque, état de chaque service, activité récente |
-| Services | Détail d'un service : démarrer / redémarrer / arrêter, CPU et mémoire, console de logs en direct |
-| Réglages | Utilisateurs : activer ou désactiver les comptes (les autres sections arrivent en phase 3) |
+| Services | Détail d'un service : démarrer / redémarrer / arrêter, CPU et mémoire, console de logs en direct, et les identifiants de son interface d'origine |
+| Réglages | Langue et qualité, téléchargements (vitesse, plage horaire, partage), VPN, sites d'indexation, Plex, comptes, mode avancé |
 
 Le panel parle à Docker à travers `socket-proxy`, qui n'autorise que la lecture de l'état, des logs et des
 statistiques, et le démarrage / arrêt des conteneurs. Les clés API des outils ne quittent jamais le serveur.

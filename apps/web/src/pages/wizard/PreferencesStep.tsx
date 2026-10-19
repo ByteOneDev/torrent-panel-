@@ -10,7 +10,7 @@ const LANG_INFO: Record<LanguageTag, { name: string; detail: string }> = {
 
 const gb = (v: number) => `${v.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Go`;
 
-export function PreferencesStep({ prefs, onChange }: { prefs: MediaPreferences; onChange: (p: MediaPreferences) => void }) {
+export function PreferencesStep({ prefs, onChange, embedded = false }: { prefs: MediaPreferences; onChange: (p: MediaPreferences) => void; embedded?: boolean }) {
   const move = (i: number, delta: number) => {
     const languages = [...prefs.languages];
     const j = i + delta;
@@ -21,8 +21,8 @@ export function PreferencesStep({ prefs, onChange }: { prefs: MediaPreferences; 
 
   return (
     <>
-      <h2>Vos préférences</h2>
-      <p className="lead">Préremplies avec vos choix. Tout restera modifiable dans les Réglages.</p>
+      {!embedded && <h2>Vos préférences</h2>}
+      {!embedded && <p className="lead">Préremplies avec vos choix. Tout restera modifiable dans les Réglages.</p>}
 
       <div className="field">
         <label>Langues, de la plus voulue à la moins voulue</label>

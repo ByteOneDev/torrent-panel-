@@ -4,7 +4,7 @@ import { AlertTriangle, Check, Loader2, Plus, Search, Zap } from 'lucide-react';
 import type { IndexerAddResult, SetupInfo } from '@motflix/shared';
 import { api } from '../../api.ts';
 
-export function IndexersStep({ info }: { info: SetupInfo }) {
+export function IndexersStep({ info, embedded = false }: { info: Pick<SetupInfo, 'indexers'>; embedded?: boolean }) {
   const defs = useQuery({ queryKey: ['indexer-defs'], queryFn: api.setup.indexerDefinitions, staleTime: 3_600_000 });
   const [query, setQuery] = useState('');
   const [onlyFrench, setOnlyFrench] = useState(false);
@@ -38,6 +38,7 @@ export function IndexersStep({ info }: { info: SetupInfo }) {
       setResults(await api.setup.addIndexers([...selected]));
       setSelected(new Set());
       await qc.invalidateQueries({ queryKey: ['setup'] });
+      await qc.invalidateQueries({ queryKey: ['indexers'] });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -47,10 +48,10 @@ export function IndexersStep({ info }: { info: SetupInfo }) {
 
   return (
     <>
-      <h2>Sites d'indexation</h2>
-      <p className="lead">Les sites où Motflix cherchera les fichiers. Étape facultative : vous pourrez en ajouter plus tard.</p>
+      {!embedded && <h2>Sites d'indexation</h2>}
+      {!embedded && <p className="lead">Les sites où Motflix cherchera les fichiers. Étape facultative : vous pourrez en ajouter plus tard.</p>}
 
-      {info.indexers.length > 0 && (
+      {!embedded && info.indexers.length > 0 && (
         <div className="hint ok"><Check className="ic ic-sm" /><span>Déjà configurés : <b>{info.indexers.map((i) => i.name).join(', ')}</b></span></div>
       )}
 

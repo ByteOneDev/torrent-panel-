@@ -1,6 +1,6 @@
 // Prowlarr : partage des sites d'indexation avec Radarr, Sonarr et LazyLibrarian,
 // FlareSolverr pour les sites protégés, et ajout de sites choisis dans l'assistant.
-import type { IndexerAddResult, IndexerDefinition } from '@motflix/shared';
+import type { ConfiguredIndexer, IndexerAddResult, IndexerDefinition } from '@motflix/shared';
 import { setFields, ToolError, type FieldsObject, type JsonClient } from './http.ts';
 
 const FLARE_TAG = 'flaresolverr';
@@ -74,6 +74,27 @@ export async function publicDefinitions(api: JsonClient): Promise<IndexerDefinit
 
 export async function configuredIndexers(api: JsonClient): Promise<{ name: string; enabled: boolean }[]> {
   return (await api.get<Indexer[]>('/indexer')).map((i) => ({ name: i.name, enabled: i.enable }));
+}
+
+/** Sites configurés, pour la page Réglages. */
+export async function listIndexers(api: JsonClient): Promise<ConfiguredIndexer[]> {
+  const flare = (await api.get<{ id: number; label: string }[]>('/tag')).find((t) => t.label === FLARE_TAG)?.id;
+  return (await api.get<Indexer[]>('/indexer'))
+    .map((i) => ({
+      id: i.id!, name: i.name, enabled: i.enable, language: i.language ?? '',
+      flaresolverr: flare !== undefined && i.tags.includes(flare),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+}
+
+export async function setIndexerEnabled(api: JsonClient, id: number, enabled: boolean): Promise<void> {
+  const indexer = await api.get<Indexer>(`/indexer/${id}`);
+  // forceSave : un site momentanément injoignable doit pouvoir être désactivé.
+  await api.put(`/indexer/${id}?forceSave=true`, { ...indexer, enable: enabled });
+}
+
+export async function deleteIndexer(api: JsonClient, id: number): Promise<void> {
+  await api.del(`/indexer/${id}`);
 }
 
 const needsFlareSolverr = (msg: string) => /cloudflare|flaresolverr|captcha|challenge/i.test(msg);

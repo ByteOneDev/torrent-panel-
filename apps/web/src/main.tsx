@@ -55,8 +55,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<Gate><DashboardPage /></Gate>} />
             <Route path="/services" element={<Gate><ServicesPage /></Gate>} />
             <Route path="/services/:id" element={<Gate><ServicesPage /></Gate>} />
-            <Route path="/reglages" element={<Navigate to="/reglages/utilisateurs" replace />} />
-            <Route path="/reglages/utilisateurs" element={<Gate><SettingsPage /></Gate>} />
+            <Route path="/reglages" element={<Navigate to="/reglages/langue" replace />} />
+            <Route path="/reglages/:section" element={<Gate><SettingsPage /></Gate>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

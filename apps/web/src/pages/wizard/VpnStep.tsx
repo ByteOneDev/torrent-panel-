@@ -17,7 +17,7 @@ const EMPTY: VpnSettings = {
   openvpnUser: '', openvpnPassword: '', countries: '', portForwarding: true,
 };
 
-export function VpnStep({ info }: { info: SetupInfo }) {
+export function VpnStep({ info, embedded = false }: { info: SetupInfo; embedded?: boolean }) {
   const [want, setWant] = useState<boolean>(info.vpn.enabled);
   const [form, setForm] = useState<VpnSettings>({ ...EMPTY, provider: info.vpn.provider ?? 'protonvpn' });
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -55,13 +55,13 @@ export function VpnStep({ info }: { info: SetupInfo }) {
 
   return (
     <>
-      <h2>Voulez-vous utiliser un VPN ?</h2>
-      <p className="lead">Il masque votre adresse IP pendant les téléchargements. Facultatif, et modifiable plus tard.</p>
+      {!embedded && <h2>Voulez-vous utiliser un VPN ?</h2>}
+      {!embedded && <p className="lead">Il masque votre adresse IP pendant les téléchargements. Facultatif, et modifiable plus tard.</p>}
 
       <div className="hint">
         <Info className="ic ic-sm" />
         <span>Actuellement : <b>{info.vpn.enabled ? `avec VPN${info.vpn.provider ? ` (${PROVIDER_LABEL[info.vpn.provider] ?? info.vpn.provider})` : ''}` : 'sans VPN'}</b>.
-          {' '}Pour garder ce réglage, passez simplement à l'étape suivante.</span>
+          {!embedded && " Pour garder ce réglage, passez simplement à l'étape suivante."}</span>
       </div>
 
       <div className="choice-cards">
