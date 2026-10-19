@@ -65,6 +65,13 @@ describe('parcours des dossiers', () => {
     expect(sources.find((s) => s.id === 'disk:MonDisque')?.defaultMode).toBe('copy');
   });
 
+  it('sous Windows, ignore le disque système et WSL', async () => {
+    dir = mkdtempSync(path.join(tmpdir(), 'motflix-win-'));
+    for (const d of ['c', 'd', 'wsl']) mkdirSync(path.join(dir, d));
+    const sources = await listSources({ ...loadConfig(), importPath: dir, importLayout: 'flat', importExclude: ['c', 'wsl'], mediaPath: dir });
+    expect(sources.filter((s) => s.id.startsWith('disk:')).map((s) => s.id)).toEqual(['disk:d']);
+  });
+
   it('sous Linux, trouve les disques dans /media/<utilisateur>/', async () => {
     dir = mkdtempSync(path.join(tmpdir(), 'motflix-media-'));
     mkdirSync(path.join(dir, 'mat/DisqueFilms'), { recursive: true });

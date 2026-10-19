@@ -397,7 +397,7 @@ Si ces contenus ne remontent pas via les indexeurs, on teste la chaîne qBittorr
 | **2** | Assistant + liaison automatique des services | Installation neuve → tout fonctionne sans ouvrir aucun autre outil — ✅ livré |
 | **3** | **Réglages unifiés** (§10) | Langue, qualité, taille et téléchargement se règlent uniquement depuis le panel — ✅ livré |
 | **4** | Recherche, bibliothèque, téléchargements | Ajouter et suivre un média sans quitter le panel — ✅ livré |
-| **5** | Rôles, PWA, finitions, `install.ps1` | v1 livrée |
+| **5** | Rôles, PWA, finitions, `install.ps1` | v1 livrée — ✅ livré (Windows non testé sur une vraie machine) |
 | Plus tard | Application Motflix (Tauri) | — |
 
 ---

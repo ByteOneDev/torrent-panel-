@@ -20,6 +20,7 @@ export interface Config {
   importPath: string;            // disques branchés, vus dans les conteneurs (/import)
   importHostPath: string | null; // le même dossier sur la machine (/Volumes ou /media)
   importLayout: 'flat' | 'user'; // macOS : /Volumes/<disque> ; Linux : /media/<utilisateur>/<disque>
+  importExclude: string[];       // noms à ignorer (Windows : le disque système « c »)
   dockerHost: string;   // unix:///… ou http://socket-proxy:2375
   composeProject: string;
   secureCookies: boolean;
@@ -47,6 +48,7 @@ export function loadConfig(): Config {
     importPath: env('IMPORT_PATH', '/import'),
     importHostPath: env('IMPORT_HOST_PATH') || null,
     importLayout: env('IMPORT_LAYOUT') === 'user' ? 'user' : 'flat',
+    importExclude: env('IMPORT_EXCLUDE').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     dockerHost: env('DOCKER_HOST', 'unix:///var/run/docker.sock'),
     composeProject: env('COMPOSE_PROJECT', 'motflix'),
     secureCookies: env('SECURE_COOKIES') === 'true',

@@ -6,15 +6,20 @@ Panel d'administration web qui réunit les outils de téléchargement et de gest
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Maquette : [docs/maquette/index.html](docs/maquette/index.html)
 
-**État : phase 4** — la stack s'installe et démarre seule ; un assistant relie tous les outils au premier accès.
-Depuis le panel : chercher et ajouter des films, séries et livres, parcourir la bibliothèque, suivre et gérer les
-téléchargements, et tout régler (langue, qualité, partage, VPN, sites, Plex, comptes) sans ouvrir les outils.
+**État : v1 (phases 0 à 5)** — la stack s'installe et démarre seule (macOS, Linux, Windows) ; un assistant relie
+tous les outils au premier accès. Depuis le panel : chercher et ajouter des films, séries et livres (langue au choix),
+importer vos fichiers existants ou un disque branché, suivre les téléchargements, tout régler sans ouvrir les outils,
+et, si vous le souhaitez, inviter d'autres personnes (membres qui demandent, lecture seule). Installable comme une
+application (HTTPS ou `localhost`).
 
 ---
 
 ## Installation
 
-Sur macOS ou Linux (Ubuntu), avec votre utilisateur habituel (pas en root) :
+**Windows 10 / 11** : double-cliquez sur `scripts/windows/install.cmd` (Docker Desktop est installé s'il manque ;
+redémarrez puis relancez si on vous le demande). *Ces scripts n'ont pas encore été testés sur un vrai Windows.*
+
+**macOS ou Linux (Ubuntu)**, avec votre utilisateur habituel (pas en root) :
 
 ```bash
 ./scripts/install.sh
@@ -98,6 +103,11 @@ Au premier accès, **l'assistant** prend la main : dossiers, VPN, Plex (connexio
 livres audio, langues préférées (VF › MULTi › VO › VOSTFR), sites d'indexation, puis « Tout configurer ».
 Il se relance à tout moment depuis le menu.
 
+**Importer vos films existants** : branchez le disque, ouvrez *Importer*, choisissez le disque, *Analyser*, cochez,
+puis *Copier* (le disque reste intact) ou *Déplacer*. Les titres importés ne sont pas « surveillés » par défaut :
+Motflix ne remplacera pas vos fichiers par d'autres versions sans que vous l'ayez demandé.
+Sur Ubuntu Server (sans bureau), montez d'abord le disque dans `/media` (`sudo mount /dev/sdX1 /media/disque`).
+
 Le panel s'ouvre directement, sans mot de passe. Pour en exiger un, activez les comptes dans
 **Réglages › Utilisateurs et rôles** (mot de passe oublié : `docker exec motflix-panel node src/reset-auth.ts`).
 
@@ -107,6 +117,8 @@ Le panel s'ouvre directement, sans mot de passe. Pour en exiger un, activez les 
 | Rechercher | Films, séries et livres (barre du haut) ; « Ajouter » selon vos préférences, avec ou sans recherche immédiate |
 | Films, Séries, Livres, Livres audio | Affiches, filtres (disponibles, en téléchargement, recherchés), fiche avec « Rechercher à nouveau » et « Retirer » |
 | Téléchargements | Vitesses, progression, temps restant, pause / reprise / suppression, « Tout mettre en pause » |
+| Importer | Fichiers ajoutés à la main, dossier `data/a-importer`, disques branchés : reconnus puis copiés ou déplacés au bon endroit |
+| Demandes | Membres : demander un titre ; administrateur : accepter ou refuser (ou validation automatique) |
 | Services | Détail d'un service : démarrer / redémarrer / arrêter, CPU et mémoire, console de logs en direct, et les identifiants de son interface d'origine |
 | Réglages | Langue et qualité, téléchargements (vitesse, plage horaire, partage), VPN, sites d'indexation, Plex, comptes, mode avancé |
 

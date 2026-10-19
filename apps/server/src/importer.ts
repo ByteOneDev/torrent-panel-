@@ -140,6 +140,7 @@ export async function listSources(config: Config): Promise<ImportSource[]> {
   const entries = await readdir(config.importPath, { withFileTypes: true }).catch(() => []);
   for (const e of entries) {
     if (e.isSymbolicLink() || !e.isDirectory() || e.name.startsWith('.') || MAC_SYSTEM_VOLUMES.has(e.name)) continue;
+    if (config.importExclude.includes(e.name.toLowerCase())) continue;
     const full = path.join(config.importPath, e.name);
     if (config.importLayout === 'user') {
       // Linux : /media/<utilisateur>/<disque> (montage automatique du bureau), ou un disque

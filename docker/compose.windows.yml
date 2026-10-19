@@ -1,0 +1,25 @@
+# Réglages propres à Windows (Docker Desktop + WSL 2), choisi par install.ps1 via COMPOSE_FILE.
+# Plex : ports publiés, comme sur macOS (le réseau de l'hôte n'est pas joignable).
+services:
+  plex:
+    networks: [motflix]
+    ports:
+      - 32400:32400
+
+  # Disques Windows (D:, E:…) vus par Docker Desktop dans /run/desktop/mnt/host/<lettre>.
+  # Le disque système (C:) et le dossier de WSL sont ignorés.
+  motflix:
+    environment:
+      PLEX_URL: http://plex:32400
+      IMPORT_LAYOUT: flat
+      IMPORT_EXCLUDE: c,wsl,wslg
+    volumes:
+      - /run/desktop/mnt/host:/import:ro
+
+  radarr:
+    volumes:
+      - /run/desktop/mnt/host:/import
+
+  sonarr:
+    volumes:
+      - /run/desktop/mnt/host:/import
