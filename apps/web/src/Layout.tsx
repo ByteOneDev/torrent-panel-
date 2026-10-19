@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  BookOpen, Download, Film, Headphones, LayoutDashboard, LogOut, Menu, Moon, Server, Settings, Shield, Sun, Tv,
+  BookOpen, Download, Film, Headphones, LayoutDashboard, LogOut, Menu, Moon, Server, Settings, Shield, Sun, Tv, Wand2,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from './api.ts';
@@ -23,7 +23,10 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     { to: '/livres-audio', label: 'Livres audio', icon: Headphones, soon: true },
   ] },
   { label: 'Activité', items: [{ to: '/telechargements', label: 'Téléchargements', icon: Download, soon: true }] },
-  { label: 'Configuration', items: [{ to: '/reglages', label: 'Réglages', icon: Settings }] },
+  { label: 'Configuration', items: [
+    { to: '/reglages', label: 'Réglages', icon: Settings },
+    { to: '/assistant', label: 'Assistant', icon: Wand2 },
+  ] },
 ];
 
 function useTheme() {

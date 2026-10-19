@@ -15,6 +15,8 @@ export interface Config {
   dataDir: string;      // base SQLite du panel
   webDir: string;       // interface compilée (vide en développement)
   mediaPath: string;    // dossier /data partagé avec les outils
+  mediaHostPath: string | null;  // le même dossier, vu depuis la machine (affichage)
+  hostDir: string | null;        // dossier d'installation sur la machine (commandes à afficher)
   dockerHost: string;   // unix:///… ou http://socket-proxy:2375
   composeProject: string;
   secureCookies: boolean;
@@ -35,6 +37,8 @@ export function loadConfig(): Config {
     dataDir: env('MOTFLIX_DATA_DIR', path.resolve(here, '../data')),
     webDir: env('MOTFLIX_WEB_DIR', path.resolve(here, '../../web/dist')),
     mediaPath: env('MEDIA_PATH', '/data'),
+    mediaHostPath: env('MEDIA_HOST_PATH') || null,
+    hostDir: env('MOTFLIX_HOST_DIR') || null,
     dockerHost: env('DOCKER_HOST', 'unix:///var/run/docker.sock'),
     composeProject: env('COMPOSE_PROJECT', 'motflix'),
     secureCookies: env('SECURE_COOKIES') === 'true',

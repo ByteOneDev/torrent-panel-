@@ -6,8 +6,9 @@ Panel d'administration web qui réunit les outils de téléchargement et de gest
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Maquette : [docs/maquette/index.html](docs/maquette/index.html)
 
-**État : phase 1** — la stack s'installe et démarre seule, et le panel permet de voir l'état de tous les services (CPU, mémoire, logs en direct) et de les démarrer, arrêter ou redémarrer.
-Les réglages unifiés arrivent en phase 3 ; en attendant, chaque outil se règle dans sa propre interface.
+**État : phase 2** — la stack s'installe et démarre seule ; au premier accès, un assistant relie tous les outils
+entre eux (téléchargement, sites, langues, Plex, livres audio, VPN). Le panel montre ensuite l'état de chaque
+service. Les réglages détaillés (langue, qualité, partage…) arrivent en phase 3.
 
 ---
 
@@ -61,6 +62,7 @@ Depuis le dossier d'installation :
 | `stop.sh` | Arrête les services (rien n'est supprimé) |
 | `update.sh` | Met à jour les services |
 | `uninstall.sh` | Désinstalle ; les médias sont conservés (sauf `--purge-data`) |
+| `apply.sh` | Applique un changement de VPN demandé depuis le panel. Lancé tout seul par l'agent (launchd / systemd) ; à la main seulement si l'agent est absent |
 
 ## Services
 
@@ -92,6 +94,10 @@ data/
 
 Après l'installation, ouvrez **http://\<ip-de-la-machine\>:8080** (le port est affiché par `start.sh` ;
 s'il est déjà pris, l'installeur choisit le suivant de libre, ou utilisez `--port`).
+Au premier accès, **l'assistant** prend la main : dossiers, VPN, Plex (connexion à votre compte en un clic),
+livres audio, langues préférées (VF › MULTi › VO › VOSTFR), sites d'indexation, puis « Tout configurer ».
+Il se relance à tout moment depuis le menu.
+
 Le panel s'ouvre directement, sans mot de passe. Pour en exiger un, activez les comptes dans
 **Réglages › Utilisateurs et rôles** (mot de passe oublié : `docker exec motflix-panel node src/reset-auth.ts`).
 
@@ -135,16 +141,7 @@ L'interface est sur http://localhost:5173 (Vite, rechargement à chaud), l'API s
 > appellent les outils par leur chemin relatif (`../../node_modules/.bin/…`), car un « : » dans le `PATH` casse
 > la résolution des commandes.
 
-### Scripts de liaison
-
-En attendant l'assistant (phase 2), deux scripts font les liaisons par API :
-
-| Script | Rôle |
-|---|---|
-| `scripts/dev/wire-radarr.py` | Radarr ↔ qBittorrent, Prowlarr → Radarr, dossier racine, renommage, hardlinks |
-| `scripts/dev/plex-link.py claim-…` | Lie Plex au compte (code `plex.tv/claim`), crée la bibliothèque Films, branche Radarr dessus |
-
-## Test de la phase 0 (réglages à la main)
+## Test à la main (sans l'assistant)
 
 Uniquement avec un contenu **libre de droits et léger** (ex. un court métrage de la Blender Foundation).
 

@@ -62,6 +62,24 @@ export class QbittorrentClient {
     if (!res.ok) throw new Error(`qBittorrent ${path} → ${res.status}`);
     return (await res.json()) as T;
   }
+
+  async setPreferences(prefs: Record<string, unknown>): Promise<void> {
+    const doPost = () =>
+      fetch(`${this.config.urls.qbittorrent}/api/v2/app/setPreferences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(this.sid ? { Cookie: this.sid } : {}) },
+        body: new URLSearchParams({ json: JSON.stringify(prefs) }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+    let res = await doPost();
+    if (res.status === 403 && this.config.qbittorrent.password) {
+      await res.body?.cancel();
+      await this.login();
+      res = await doPost();
+    }
+    await res.body?.cancel();
+    if (!res.ok) throw new Error(`qBittorrent a refusé les réglages (${res.status})`);
+  }
 }
 
 async function downloads(qbt: QbittorrentClient): Promise<DashboardResponse['downloads']> {

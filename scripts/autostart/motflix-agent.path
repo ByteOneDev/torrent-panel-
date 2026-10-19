@@ -1,0 +1,10 @@
+# Motflix — agent : surveille les demandes du panel (installé par install.sh).
+[Unit]
+Description=Motflix : demandes du panel
+
+[Path]
+DirectoryNotEmpty=@INSTALL_DIR@/config/motflix/agent/queue
+Unit=motflix-agent.service
+
+[Install]
+WantedBy=multi-user.target

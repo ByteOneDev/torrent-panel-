@@ -60,6 +60,11 @@ export class AuthStore {
     this.dummyHash = hash(randomBytes(16).toString('hex'));
   }
 
+  setupDone(): boolean {
+    const row = this.db.prepare("SELECT value FROM settings WHERE key = 'setup_done'").get() as { value: string } | undefined;
+    return row?.value === '1';
+  }
+
   authEnabled(): boolean {
     const row = this.db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get() as { value: string } | undefined;
     return row?.value === '1';
@@ -184,6 +189,7 @@ export function registerAuth(app: FastifyInstance, store: AuthStore, config: Con
   app.get('/api/auth/state', async (req): Promise<AuthState> => ({
     authEnabled: store.authEnabled(),
     user: req.user ? { username: req.user.username, role: req.user.role } : null,
+    setupDone: store.setupDone(),
   }));
 
   app.post('/api/auth/login', async (req, reply) => {

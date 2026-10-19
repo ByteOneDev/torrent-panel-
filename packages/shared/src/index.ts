@@ -96,8 +96,103 @@ export interface AuthState {
   authEnabled: boolean;
   /** Utilisateur courant ; null seulement si les comptes sont activés et que personne n'est connecté. */
   user: { username: string; role: 'admin' } | null;
+  /** L'assistant de première configuration a été terminé (ou passé). */
+  setupDone: boolean;
 }
 
 export interface ApiError {
   error: string;
+}
+
+// ─── Assistant de configuration ──────────────────────────────────────────
+
+export type LanguageTag = 'VF' | 'MULTi' | 'VO' | 'VOSTFR';
+export type Resolution = '720p' | '1080p' | '2160p';
+
+/** Préférences appliquées aux films et séries (profils de Radarr et Sonarr). */
+export interface MediaPreferences {
+  /** Ordre de préférence, de la plus voulue à la moins voulue. */
+  languages: LanguageTag[];
+  acceptVfq: boolean;
+  upgradeLanguage: boolean;
+  rejectOthers: boolean;
+  resolution: Resolution;
+  allowHdr: boolean;
+  avoidRemux: boolean;
+  maxMovieGb: number;
+  maxEpisodeGb: number;
+}
+
+export type TaskState = 'pending' | 'running' | 'done' | 'error' | 'skipped';
+
+export interface SetupTask {
+  id: string;
+  label: string;
+  state: TaskState;
+  detail?: string;
+}
+
+export interface SetupRun {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  tasks: SetupTask[];
+}
+
+export interface VpnSettings {
+  enabled: boolean;
+  provider: string;
+  type: 'wireguard' | 'openvpn';
+  wireguardPrivateKey: string;
+  wireguardAddresses: string;
+  openvpnUser: string;
+  openvpnPassword: string;
+  countries: string;
+  portForwarding: boolean;
+}
+
+export interface AgentResult {
+  id: string;
+  ok: boolean;
+  message: string;
+  finishedAt: string;
+}
+
+export interface SetupInfo {
+  setupDone: boolean;
+  media: {
+    hostPath: string | null;
+    folders: { path: string; exists: boolean }[];
+    disk: { totalBytes: number; freeBytes: number } | null;
+  };
+  vpn: {
+    enabled: boolean;
+    provider: string | null;
+    agentInstalled: boolean;
+    applyCommand: string;
+    pending: boolean;
+    lastResult: AgentResult | null;
+  };
+  plex: { installed: boolean; claimed: boolean; linked: boolean; account: string | null };
+  audiobookshelf: { initialized: boolean; managed: boolean; username: string | null; password: string | null };
+  preferences: MediaPreferences;
+  indexers: { name: string; enabled: boolean }[];
+}
+
+export interface IndexerDefinition {
+  name: string;
+  description: string;
+  language: string;
+}
+
+export interface IndexerAddResult {
+  name: string;
+  ok: boolean;
+  message: string;
+}
+
+export interface PlexPin {
+  id: number;
+  code: string;
+  authUrl: string;
 }

@@ -51,7 +51,7 @@ describe('authentification', () => {
 
   it("ouvre le panel sans connexion par défaut, en administrateur", async () => {
     const state = await app.inject({ method: 'GET', url: '/api/auth/state' });
-    expect(state.json()).toEqual({ authEnabled: false, user: { username: 'admin', role: 'admin' } });
+    expect(state.json()).toEqual({ authEnabled: false, user: { username: 'admin', role: 'admin' }, setupDone: false });
     const services = await app.inject({ method: 'GET', url: '/api/services' });
     expect(services.statusCode).toBe(200);
   });
@@ -67,7 +67,7 @@ describe('authentification', () => {
     // Sans session : bloqué. Avec la session ouverte à l'activation : connecté.
     expect((await app.inject({ method: 'GET', url: '/api/services' })).statusCode).toBe(401);
     const state = await app.inject({ method: 'GET', url: '/api/auth/state', headers: { cookie } });
-    expect(state.json()).toEqual({ authEnabled: true, user: { username: 'admin', role: 'admin' } });
+    expect(state.json()).toEqual({ authEnabled: true, user: { username: 'admin', role: 'admin' }, setupDone: false });
 
     // Personne ne peut redéfinir l'administrateur tant que les comptes sont actifs.
     expect((await enable({ username: 'pirate', password: 'motdepasse-test' })).statusCode).toBe(401);

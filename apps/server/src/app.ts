@@ -11,6 +11,8 @@ import { Dashboard } from './dashboard.ts';
 import type { Db } from './db.ts';
 import { createLogParser, DockerClient, DockerError } from './docker.ts';
 import { ServiceError, ServiceManager } from './services.ts';
+import { Settings } from './settings.ts';
+import { registerSetup } from './setup/routes.ts';
 
 export interface AppDeps {
   config: Config;
@@ -66,6 +68,8 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
   });
 
   app.get('/api/dashboard', () => dashboard.get());
+
+  registerSetup(app, { config, settings: new Settings(db), services });
 
   // Logs en direct, en Server-Sent Events.
   app.get<{ Params: { id: string }; Querystring: { tail?: string } }>('/api/services/:id/logs', async (req, reply) => {

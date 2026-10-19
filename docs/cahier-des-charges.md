@@ -117,7 +117,10 @@ Motflix est un **panel d'administration web** qui réunit dans une seule interfa
   - **Avec VPN** : qBittorrent utilise le réseau de Gluetun (`network_mode: service:gluetun`). Si le VPN tombe, qBittorrent perd tout accès réseau : **aucune fuite d'IP possible**.
   - **Sans VPN** : qBittorrent est sur le réseau normal.
 - Prowlarr et FlareSolverr ne passent pas par le VPN par défaut. Une option « Faire passer les recherches par le VPN » est prévue.
-- Le panel bascule en modifiant `.env`, puis en relançant `docker compose up -d`.
+- Le panel ne peut pas recréer de conteneurs (accès Docker restreint). Il dépose sa demande dans
+  `config/motflix/agent/queue/` ; un **agent** sur la machine (launchd sur macOS, unité systemd `.path` sur Linux)
+  lance `apply.sh`, qui vérifie la demande (liste blanche de réglages), met à jour `.env`, recrée les conteneurs et
+  écrit le résultat que l'assistant affiche. Une clé invalide est refusée avant même d'être envoyée.
 
 ### 5.4 Port forwarding — décision
 
@@ -200,9 +203,11 @@ Les conteneurs ont `restart: unless-stopped` en filet de sécurité.
 Affiché au premier lancement du panel. Chaque étape peut être refaite plus tard dans les Réglages.
 
 1. **Bienvenue** : présentation (aucun compte demandé ; ils restent activables dans les Réglages).
-2. **Dossiers** : confirmation du dossier des médias, espace libre affiché.
+2. **Dossiers** : dossier des médias, présence des 8 sous-dossiers, espace libre (le changer : `install.sh --data-dir`).
 3. **VPN** : Sans VPN / Avec VPN → fournisseur (liste Gluetun), identifiants (WireGuard ou OpenVPN), bouton **Tester** qui affiche l'IP vue de l'extérieur.
-4. **Lecture** : Plex (code de liaison depuis `plex.tv/claim`) ou Motflix App (grisé, « bientôt »).
+4. **Lecture** : bouton « Se connecter avec Plex » (connexion officielle plex.tv, sans code à copier) : le panel
+   rattache le serveur au compte puis crée les bibliothèques. Identifiants Audiobookshelf (générés, à noter pour
+   l'appli mobile). Motflix App grisé, « bientôt ».
 5. **Préférences** : langues (§10.1, préremplies), qualité, tailles maximales.
 6. **Sites d'indexation** : ajout dans Prowlarr depuis une liste avec recherche et test. Étape facultative, à faire plus tard si on veut.
 7. **Récapitulatif → « Tout configurer »**. Le panel effectue automatiquement :
@@ -389,7 +394,7 @@ Si ces contenus ne remontent pas via les indexeurs, on teste la chaîne qBittorr
 |---|---|---|
 | **0** | `docker-compose.yml`, `install.sh`, `start.sh`, démarrage automatique | Un film libre va de la recherche jusqu'à Plex, configuré à la main ; redémarrage OK |
 | **1** | Squelette du panel : connexion, tableau de bord, services (état, ressources, logs, actions) | Les services se pilotent depuis le panel — ✅ livré |
-| **2** | Assistant + liaison automatique des services | Installation neuve → tout fonctionne sans ouvrir aucun autre outil |
+| **2** | Assistant + liaison automatique des services | Installation neuve → tout fonctionne sans ouvrir aucun autre outil — ✅ livré |
 | **3** | **Réglages unifiés** (§10) | Langue, qualité, taille et téléchargement se règlent uniquement depuis le panel |
 | **4** | Recherche, bibliothèque, téléchargements | Ajouter et suivre un média sans quitter le panel |
 | **5** | Rôles, PWA, finitions, `install.ps1` | v1 livrée |

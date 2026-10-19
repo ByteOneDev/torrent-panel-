@@ -55,12 +55,18 @@ fi
 # ─── Démarrage automatique ───────────────────────────────────────────────
 step "Démarrage automatique"
 if [ "$OS" = linux ]; then
+  if [ -f /etc/systemd/system/motflix-agent.path ]; then
+    sudo systemctl disable --now motflix-agent.path >/dev/null 2>&1 || true
+    sudo rm -f /etc/systemd/system/motflix-agent.path /etc/systemd/system/motflix-agent.service
+  fi
   if [ -f /etc/systemd/system/motflix.service ]; then
     sudo systemctl disable motflix.service >/dev/null 2>&1 || true
     sudo rm -f /etc/systemd/system/motflix.service
     sudo systemctl daemon-reload
   fi
 else
+  launchctl bootout "gui/$(id -u)/fr.motflix.agent" >/dev/null 2>&1 || true
+  rm -f "$HOME/Library/LaunchAgents/fr.motflix.agent.plist"
   plist="$HOME/Library/LaunchAgents/fr.motflix.start.plist"
   if [ -f "$plist" ]; then
     launchctl bootout "gui/$(id -u)" "$plist" >/dev/null 2>&1 || true
@@ -74,7 +80,7 @@ step "Configuration"
 if ask_yn "Supprimer aussi la configuration des outils (réglages, clés, historique) ?" n; then
   safe_rm "$INSTALL_DIR/config"
   rm -f "$ENV_FILE"
-  for f in docker-compose.yml compose.plex-host.yml compose.plex-bridge.yml start.sh stop.sh update.sh lib.sh; do
+  for f in docker-compose.yml compose.plex-host.yml compose.plex-bridge.yml start.sh stop.sh update.sh apply.sh lib.sh; do
     rm -f "$INSTALL_DIR/$f"
   done
   safe_rm "$INSTALL_DIR/logs"

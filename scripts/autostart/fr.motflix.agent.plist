@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Motflix — agent : applique les demandes du panel (VPN) dès qu'elles arrivent. Installé par install.sh. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>fr.motflix.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>@INSTALL_DIR@/apply.sh</string>
+  </array>
+  <!-- Lancé tant que le dossier contient une demande ; apply.sh la retire aussitôt. -->
+  <key>QueueDirectories</key>
+  <array>
+    <string>@INSTALL_DIR@/config/motflix/agent/queue</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>@INSTALL_DIR@</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>@HOME@/.docker/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>@INSTALL_DIR@/logs/agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>@INSTALL_DIR@/logs/agent.log</string>
+</dict>
+</plist>

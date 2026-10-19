@@ -8,6 +8,7 @@ import { LoginPage } from './pages/AuthPage.tsx';
 import { DashboardPage } from './pages/DashboardPage.tsx';
 import { ServicesPage } from './pages/ServicesPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
+import { WizardPage } from './pages/WizardPage.tsx';
 import { ToastProvider } from './ui.tsx';
 import './styles.css';
 
@@ -25,12 +26,14 @@ function Loading() {
   return <div className="auth-page"><div className="dim">Chargement…</div></div>;
 }
 
-function Gate({ children }: { children: ReactNode }) {
+function Gate({ children, setup = false }: { children: ReactNode; setup?: boolean }) {
   const { data, error } = useAuthState();
   if (error) return <div className="auth-page"><div className="alert">{(error as Error).message}</div></div>;
   if (!data) return <Loading />;
   // Comptes désactivés (par défaut) : le serveur nous traite déjà en administrateur.
   if (!data.user) return <Navigate to="/connexion" replace />;
+  // Premier lancement : l'assistant d'abord.
+  if (!data.setupDone && !setup) return <Navigate to="/assistant" replace />;
   return children;
 }
 
@@ -48,6 +51,7 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/connexion" element={<LoginRoute />} />
+            <Route path="/assistant" element={<Gate setup><WizardPage /></Gate>} />
             <Route path="/" element={<Gate><DashboardPage /></Gate>} />
             <Route path="/services" element={<Gate><ServicesPage /></Gate>} />
             <Route path="/services/:id" element={<Gate><ServicesPage /></Gate>} />

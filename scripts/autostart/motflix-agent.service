@@ -1,0 +1,13 @@
+# Motflix — agent : applique une demande du panel (VPN). Déclenché par motflix-agent.path.
+[Unit]
+Description=Motflix : application d'une demande du panel
+After=docker.service
+
+[Service]
+Type=oneshot
+User=@USER@
+WorkingDirectory=@INSTALL_DIR@
+ExecStart=@INSTALL_DIR@/apply.sh
+StandardOutput=append:@INSTALL_DIR@/logs/agent.log
+StandardError=append:@INSTALL_DIR@/logs/agent.log
+TimeoutStartSec=600

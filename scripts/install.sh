@@ -281,7 +281,7 @@ copy() {
 for f in docker-compose.yml compose.plex-host.yml compose.plex-bridge.yml; do
   copy "$REPO_DIR/docker/$f" "$INSTALL_DIR/$f"
 done
-for f in lib.sh start.sh stop.sh update.sh uninstall.sh; do
+for f in lib.sh start.sh stop.sh update.sh uninstall.sh apply.sh; do
   copy "$REPO_DIR/scripts/$f" "$INSTALL_DIR/$f"
   chmod +x "$INSTALL_DIR/$f"
 done
@@ -379,6 +379,7 @@ if [ "$HAS_CONFIG" = 1 ]; then
   env_set "$ENV_FILE" DOCKER_RUNTIME "$DOCKER_RUNTIME"
   # Ajouts des versions récentes, absents des installations plus anciennes.
   env_set "$ENV_FILE" MOTFLIX_SRC "$REPO_DIR"
+  env_set "$ENV_FILE" MOTFLIX_DIR "$INSTALL_DIR"
   if [ -n "$PANEL_PORT" ] || [ -z "$(env_get "$ENV_FILE" PANEL_PORT)" ]; then
     env_set "$ENV_FILE" PANEL_PORT "$(choose_panel_port)"
   fi
@@ -414,6 +415,7 @@ EOF
     env_set "$tmp_env" TZ "$(detect_tz)"
     env_set "$tmp_env" DATA_DIR "$DATA_DIR"
     env_set "$tmp_env" MOTFLIX_SRC "$REPO_DIR"
+    env_set "$tmp_env" MOTFLIX_DIR "$INSTALL_DIR"
     env_set "$tmp_env" PANEL_PORT "$(choose_panel_port)"
     env_set "$tmp_env" TOOLS_BIND "$bind"
     env_set "$tmp_env" TORRENT_PORT 6881
@@ -451,6 +453,7 @@ fi
 # Écrite seulement au premier lancement : les outils reprennent ensuite la main.
 step "Préconfiguration des outils"
 CONFIG_DIR="$INSTALL_DIR/config"
+mkdir -p "$CONFIG_DIR/motflix/agent/queue" && chmod 700 "$CONFIG_DIR/motflix/agent"
 mkdir -p "$CONFIG_DIR"/{motflix,radarr,sonarr,prowlarr,lazylibrarian,qbittorrent/qBittorrent,gluetun,plex} \
          "$CONFIG_DIR/audiobookshelf/config" "$CONFIG_DIR/audiobookshelf/metadata"
 
@@ -570,7 +573,36 @@ else
   fi
 fi
 
-# ─── 8. Téléchargement des images et démarrage ───────────────────────────
+# ─── 8. Agent du panel (VPN) ─────────────────────────────────────────────
+# Toujours installé, même sans démarrage automatique : c'est lui qui applique
+# les changements de VPN demandés depuis le panel.
+step "Agent du panel"
+agent_marker="$CONFIG_DIR/motflix/agent/installed"
+rm -f "$agent_marker"
+if [ "$OS" = linux ]; then
+  render "$REPO_DIR/scripts/autostart/motflix-agent.path" | sudo tee /etc/systemd/system/motflix-agent.path >/dev/null
+  render "$REPO_DIR/scripts/autostart/motflix-agent.service" | sudo tee /etc/systemd/system/motflix-agent.service >/dev/null
+  sudo systemctl daemon-reload
+  if sudo systemctl enable --now motflix-agent.path >/dev/null 2>&1; then
+    printf 'systemd %s\n' "$(date '+%Y-%m-%d %H:%M')" >"$agent_marker"
+    ok "Agent actif (systemd)"
+  else
+    warn "Agent non démarré : le VPN se changera avec $INSTALL_DIR/apply.sh"
+  fi
+else
+  agent_plist="$HOME/Library/LaunchAgents/fr.motflix.agent.plist"
+  mkdir -p "$HOME/Library/LaunchAgents"
+  render "$REPO_DIR/scripts/autostart/fr.motflix.agent.plist" >"$agent_plist"
+  launchctl bootout "gui/$(id -u)/fr.motflix.agent" >/dev/null 2>&1 || true
+  if plutil -lint "$agent_plist" >/dev/null && launchctl bootstrap "gui/$(id -u)" "$agent_plist" 2>/dev/null; then
+    printf 'launchd %s\n' "$(date '+%Y-%m-%d %H:%M')" >"$agent_marker"
+    ok "Agent actif (launchd)"
+  else
+    warn "Agent non démarré : le VPN se changera avec $INSTALL_DIR/apply.sh"
+  fi
+fi
+
+# ─── 9. Téléchargement des images et démarrage ───────────────────────────
 INSTALL_PROFILES=",$(env_get "$ENV_FILE" COMPOSE_PROFILES),"
 
 if [ "$START" = 0 ]; then

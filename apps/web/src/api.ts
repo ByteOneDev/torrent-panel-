@@ -1,4 +1,7 @@
-import type { AuthState, DashboardResponse, ServiceAction, ServicesResponse } from '@motflix/shared';
+import type {
+  AuthState, DashboardResponse, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
+  ServicesResponse, SetupInfo, SetupRun, VpnSettings,
+} from '@motflix/shared';
 
 export class ApiError extends Error {
   status: number;
@@ -35,4 +38,22 @@ export const api = {
   services: () => call<ServicesResponse>('GET', '/api/services'),
   serviceAction: (id: string, action: ServiceAction) => call<{ ok: true }>('POST', `/api/services/${id}/${action}`, {}),
   dashboard: () => call<DashboardResponse>('GET', '/api/dashboard'),
+
+  setup: {
+    info: () => call<SetupInfo>('GET', '/api/setup'),
+    savePreferences: (p: MediaPreferences) => call<MediaPreferences>('POST', '/api/setup/preferences', p),
+    plexPin: () => call<PlexPin>('POST', '/api/setup/plex/pin', {}),
+    plexPinStatus: (id: number) => call<{ linked: boolean; account: string | null }>('GET', `/api/setup/plex/pin/${id}`),
+    plexUnlink: () => call<{ ok: true }>('POST', '/api/setup/plex/unlink', {}),
+    audiobookshelf: (username: string, password: string) =>
+      call<{ ok: true }>('POST', '/api/setup/audiobookshelf', { username, password }),
+    vpnProviders: () => call<string[]>('GET', '/api/setup/vpn/providers'),
+    applyVpn: (v: VpnSettings) =>
+      call<{ id: string; agentInstalled: boolean; applyCommand: string }>('POST', '/api/setup/vpn', v),
+    indexerDefinitions: () => call<IndexerDefinition[]>('GET', '/api/setup/indexers'),
+    addIndexers: (names: string[]) => call<IndexerAddResult[]>('POST', '/api/setup/indexers', { names }),
+    run: () => call<SetupRun>('POST', '/api/setup/run', {}),
+    runStatus: () => call<SetupRun>('GET', '/api/setup/run'),
+    finish: () => call<{ ok: true }>('POST', '/api/setup/finish', {}),
+  },
 };
