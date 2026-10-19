@@ -4,7 +4,7 @@
 // choisi (400 / 300 / 200 / 100). Le profil « Motflix » accepte toutes les langues côté
 // filtre natif et laisse le score départager. Avec « refuser les autres langues »,
 // un score minimum de 1 écarte tout ce qui ne correspond à aucune langue voulue.
-import type { LanguageTag, MediaPreferences } from '@motflix/shared';
+import type { LanguagePreset, LanguageTag, MediaPreferences } from '@motflix/shared';
 import type { JsonClient } from './http.ts';
 
 export const PROFILE_NAME = 'Motflix';
@@ -161,34 +161,14 @@ export async function applyPreferences(api: JsonClient, kind: 'radarr' | 'sonarr
     ids.set(cf.name, saved.id!);
   }
 
-  // 2. Profil « Motflix ».
-  const scores = languageScores(prefs);
-  const profiles = await api.get<QualityProfile[]>('/qualityprofile');
-  const base = profiles.find((p) => p.name === PROFILE_NAME) ?? (await api.get<QualityProfile>('/qualityprofile/schema'));
-  const cutoff = applyQualities(base.items, prefs);
+  // 2. Profil « Motflix » (vos préférences) et ses variantes de langue.
   const allFormats = await api.get<CustomFormat[]>('/customformat');
-  const topScore = Math.max(...scores.values());
-  const minScore = Math.min(...scores.values());
-  const profile: QualityProfile = {
-    ...base,
-    name: PROFILE_NAME,
-    upgradeAllowed: true,
-    cutoff,
-    minFormatScore: prefs.rejectOthers ? 1 : 0,
-    cutoffFormatScore: prefs.upgradeLanguage ? topScore : minScore,
-    minUpgradeFormatScore: 1,
-    formatItems: allFormats.map((f) => {
-      const tag = f.name.startsWith(CF_PREFIX) ? (f.name.slice(CF_PREFIX.length) as LanguageTag) : null;
-      const score = f.name === HDR_NAME
-        ? (prefs.allowHdr ? 0 : REJECT_SCORE)
-        : tag && scores.has(tag) ? scores.get(tag)! : 0;
-      return { format: f.id!, name: f.name, score };
-    }),
-  };
-  if (kind === 'radarr') profile.language = { id: -1, name: 'Any' };
-  const savedProfile = profile.id
-    ? await api.put<QualityProfile>(`/qualityprofile/${profile.id}`, profile)
-    : await api.post<QualityProfile>('/qualityprofile', profile);
+  let profiles = await api.get<QualityProfile[]>('/qualityprofile');
+  const savedProfile = await upsertProfile(api, kind, PROFILE_NAME, prefs, allFormats, profiles);
+  for (const preset of ['original', 'french'] as const) {
+    profiles = await api.get<QualityProfile[]>('/qualityprofile');
+    await upsertProfile(api, kind, PRESET_PROFILES[preset], presetPreferences(prefs, preset), allFormats, profiles);
+  }
 
   // 3. Taille maximale des qualités cochées.
   const minutes = kind === 'radarr' ? 120 : 45;
@@ -204,7 +184,10 @@ export async function applyPreferences(api: JsonClient, kind: 'radarr' | 'sonarr
   // 4. Les films / séries déjà suivis passent sur ce profil.
   const path = kind === 'radarr' ? '/movie' : '/series';
   const media = await api.get<{ id: number; qualityProfileId: number }[]>(path);
-  const toMove = media.filter((m) => m.qualityProfileId !== savedProfile.id).map((m) => m.id);
+  // Les titres réglés sur une variante (« VO d'abord »…) la gardent.
+  const motflixIds = new Set((await api.get<QualityProfile[]>('/qualityprofile'))
+    .filter((p) => p.name === PROFILE_NAME || p.name.startsWith(`${PROFILE_NAME} · `)).map((p) => p.id));
+  const toMove = media.filter((m) => !motflixIds.has(m.qualityProfileId)).map((m) => m.id);
   if (toMove.length) {
     const body = kind === 'radarr'
       ? { movieIds: toMove, qualityProfileId: savedProfile.id }
@@ -216,8 +199,66 @@ export async function applyPreferences(api: JsonClient, kind: 'radarr' | 'sonarr
   return `${order} · ${prefs.resolution} · max ${max} Mo/min${toMove.length ? ` · ${toMove.length} titre(s) mis à jour` : ''}`;
 }
 
+// ─── Variantes de langue ─────────────────────────────────────────────────
+
+/** Profil de chaque choix de langue proposé à l'ajout d'un film ou d'une série. */
+export const PRESET_PROFILES: Record<LanguagePreset, string> = {
+  default: PROFILE_NAME,
+  original: `${PROFILE_NAME} · VO d'abord`,
+  french: `${PROFILE_NAME} · Français seulement`,
+};
+
+/** Préférences d'une variante : même qualité et mêmes tailles, autres langues. */
+export function presetPreferences(prefs: MediaPreferences, preset: LanguagePreset): MediaPreferences {
+  if (preset === 'original') return { ...prefs, languages: ['VO', 'VOSTFR', 'MULTi', 'VF'], rejectOthers: true };
+  if (preset === 'french') return { ...prefs, languages: ['VF', 'MULTi'], rejectOthers: true };
+  return prefs;
+}
+
+async function upsertProfile(api: JsonClient, kind: 'radarr' | 'sonarr', name: string, prefs: MediaPreferences,
+  allFormats: CustomFormat[], profiles: QualityProfile[]): Promise<QualityProfile> {
+  const scores = languageScores(prefs);
+  const base = profiles.find((p) => p.name === name) ?? (await api.get<QualityProfile>('/qualityprofile/schema'));
+  const cutoff = applyQualities(base.items, prefs);
+  const topScore = Math.max(...scores.values());
+  const minScore = Math.min(...scores.values());
+  const profile: QualityProfile = {
+    ...base,
+    name,
+    upgradeAllowed: true,
+    cutoff,
+    minFormatScore: prefs.rejectOthers ? 1 : 0,
+    cutoffFormatScore: prefs.upgradeLanguage ? topScore : minScore,
+    minUpgradeFormatScore: 1,
+    formatItems: allFormats.map((f) => {
+      const tag = f.name.startsWith(CF_PREFIX) ? (f.name.slice(CF_PREFIX.length) as LanguageTag) : null;
+      const score = f.name === HDR_NAME
+        ? (prefs.allowHdr ? 0 : REJECT_SCORE)
+        : tag && scores.has(tag) ? scores.get(tag)! : 0;
+      return { format: f.id!, name: f.name, score };
+    }),
+  };
+  if (kind === 'radarr') profile.language = { id: -1, name: 'Any' };
+  return profile.id
+    ? api.put<QualityProfile>(`/qualityprofile/${profile.id}`, profile)
+    : api.post<QualityProfile>('/qualityprofile', profile);
+}
+
+/** Identifiant du profil d'un choix de langue (repli : profil Motflix, puis le premier). */
+export async function profileIdFor(api: JsonClient, preset: LanguagePreset = 'default'): Promise<number | null> {
+  const profiles = await api.get<QualityProfile[]>('/qualityprofile');
+  return profiles.find((p) => p.name === PRESET_PROFILES[preset])?.id
+    ?? profiles.find((p) => p.name === PROFILE_NAME)?.id ?? null;
+}
+
+/** Choix de langue correspondant à un profil (null : profil étranger à Motflix). */
+export function presetOfProfile(profiles: { id: number; name: string }[], id: number): LanguagePreset | null {
+  const name = profiles.find((p) => p.id === id)?.name;
+  const entry = Object.entries(PRESET_PROFILES).find(([, n]) => n === name);
+  return entry ? (entry[0] as LanguagePreset) : null;
+}
+
 /** Identifiant du profil Motflix (pour ajouter des films ou séries plus tard). */
 export async function motflixProfileId(api: JsonClient): Promise<number | null> {
-  const profiles = await api.get<QualityProfile[]>('/qualityprofile');
-  return profiles.find((p) => p.name === PROFILE_NAME)?.id ?? null;
+  return profileIdFor(api, 'default');
 }

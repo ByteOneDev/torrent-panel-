@@ -5,7 +5,7 @@ import {
   AlertCircle, Code, Download, ExternalLink, Info, Languages, List, Loader2, Shield, Trash2, Tv, Users, Zap,
   type LucideIcon,
 } from 'lucide-react';
-import type { DownloadSettings, MediaPreferences } from '@motflix/shared';
+import type { DownloadSettings, MediaPreferences, Role, UserInfo } from '@motflix/shared';
 import { api } from '../api.ts';
 import { useAuthState, useServices } from '../hooks.ts';
 import { ServiceIcon } from '../icons.tsx';
@@ -438,12 +438,14 @@ function UsersSection() {
         </SettingRow>
         {!enabled && enabling && <EnableAccountsForm onCancel={() => setEnabling(false)} />}
       </div>
-      <div className={`card ${enabled ? '' : 'locked'}`}>
-        <div className="card-head"><h3>Rôles</h3><span className="badge right">Bientôt</span></div>
-        <SettingRow title="Membre et Lecture seule" text="Inviter d'autres personnes avec des droits limités (demandes de films, consultation) arrivera dans une prochaine version.">
-          <span />
-        </SettingRow>
-      </div>
+      {enabled ? <UsersManager /> : (
+        <div className="card locked">
+          <div className="card-head"><h3>Comptes et rôles</h3></div>
+          <SettingRow title="Membre et Lecture seule" text="Activez les comptes pour inviter d'autres personnes : les membres demandent des films, la lecture seule consulte.">
+            <span />
+          </SettingRow>
+        </div>
+      )}
       <p className="dim" style={{ fontSize: 12.5, margin: 0 }}>
         Mot de passe oublié : <code className="mono">docker exec motflix-panel node src/reset-auth.ts</code> désactive les comptes.
       </p>
@@ -453,6 +455,99 @@ function UsersSection() {
           confirmLabel="Désactiver" danger onCancel={() => setConfirmDisable(false)} onConfirm={disable} />
       )}
     </div>
+  );
+}
+
+const ROLE_TEXT: Record<Role, { label: string; text: string }> = {
+  admin: { label: 'Administrateur', text: 'Tout, réglages compris.' },
+  member: { label: 'Membre', text: 'Parcourt la bibliothèque, cherche et demande des titres.' },
+  viewer: { label: 'Lecture seule', text: 'Parcourt la bibliothèque et suit les téléchargements.' },
+};
+
+function UsersManager() {
+  const users = useQuery({ queryKey: ['users'], queryFn: api.users.list });
+  const auto = useQuery({ queryKey: ['requests-settings'], queryFn: api.requests.settings });
+  const [form, setForm] = useState<{ username: string; password: string; role: Role } | null>(null);
+  const [toDelete, setToDelete] = useState<UserInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const toast = useToast();
+
+  async function run(fn: () => Promise<unknown>, done: string) {
+    setError(null);
+    try {
+      await fn();
+      toast({ title: done });
+      await qc.invalidateQueries({ queryKey: ['users'] });
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    }
+  }
+
+  async function create(e: FormEvent) {
+    e.preventDefault();
+    if (!form) return;
+    if (await run(() => api.users.create(form.username.trim(), form.password, form.role), `Compte « ${form.username} » créé`)) setForm(null);
+  }
+
+  return (
+    <>
+      <div className="card">
+        <div className="card-head">
+          <h3>Comptes</h3>
+          <div className="right"><button className="btn btn-sm" onClick={() => setForm({ username: '', password: '', role: 'member' })}>Ajouter un compte</button></div>
+        </div>
+        {users.data?.map((u) => (
+          <div key={u.id} className="row">
+            <div className="avatar">{u.username.slice(0, 1)}</div>
+            <div className="row-main"><b>{u.username}</b><span>{ROLE_TEXT[u.role].text}</span></div>
+            <select className="input" style={{ width: 170 }} value={u.role} aria-label={`Rôle de ${u.username}`}
+              onChange={(e) => run(() => api.users.update(u.id, { role: e.target.value as Role }), `Rôle de ${u.username} changé`)}>
+              {(Object.keys(ROLE_TEXT) as Role[]).map((r) => <option key={r} value={r}>{ROLE_TEXT[r].label}</option>)}
+            </select>
+            <button className="btn btn-ghost btn-sm" title="Nouveau mot de passe" onClick={() => {
+              const p = window.prompt(`Nouveau mot de passe pour ${u.username} (8 caractères minimum) :`);
+              if (p) void run(() => api.users.update(u.id, { password: p }), `Mot de passe de ${u.username} changé`);
+            }}>Mot de passe</button>
+            <button className="btn btn-ghost btn-sm btn-err" aria-label={`Supprimer ${u.username}`} onClick={() => setToDelete(u)}><Trash2 className="ic ic-sm" /></button>
+          </div>
+        ))}
+        {form && (
+          <form className="setting col" onSubmit={create}>
+            <div className="grid g3">
+              <div className="field"><label htmlFor="nu-name">Nom d'utilisateur</label>
+                <input id="nu-name" className="input" required autoFocus value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></div>
+              <div className="field"><label htmlFor="nu-pass">Mot de passe</label>
+                <input id="nu-pass" className="input" type="password" required minLength={8} autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+              <div className="field"><label htmlFor="nu-role">Rôle</label>
+                <select id="nu-role" className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
+                  {(Object.keys(ROLE_TEXT) as Role[]).map((r) => <option key={r} value={r}>{ROLE_TEXT[r].label}</option>)}
+                </select></div>
+            </div>
+            <div className="form-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setForm(null)}>Annuler</button>
+              <button className="btn btn-primary">Créer le compte</button>
+            </div>
+          </form>
+        )}
+        {error && <div className="setting col"><div className="alert"><AlertCircle className="ic ic-sm" />{error}</div></div>}
+      </div>
+
+      <div className="card">
+        <SettingRow title="Accepter automatiquement les demandes" text="Les demandes des membres sont ajoutées sans attendre votre validation.">
+          <Toggle label="Validation automatique" checked={!!auto.data?.autoApprove}
+            onChange={(v) => run(async () => { qc.setQueryData(['requests-settings'], await api.requests.saveSettings(v)); }, v ? 'Validation automatique activée' : 'Validation manuelle')} />
+        </SettingRow>
+      </div>
+
+      {toDelete && (
+        <ConfirmDialog title={`Supprimer le compte « ${toDelete.username} » ?`} message="Cette personne ne pourra plus se connecter. Ses demandes passées restent visibles."
+          confirmLabel="Supprimer" danger onCancel={() => setToDelete(null)}
+          onConfirm={() => { const u = toDelete; setToDelete(null); void run(() => api.users.remove(u.id), `Compte « ${u.username} » supprimé`); }} />
+      )}
+    </>
   );
 }
 

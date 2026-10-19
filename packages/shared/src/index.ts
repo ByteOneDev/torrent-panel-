@@ -95,6 +95,43 @@ export interface DashboardResponse {
   activity: ActivityItem[];
 }
 
+export type Role = 'admin' | 'member' | 'viewer';
+
+export interface UserInfo {
+  id: number;
+  username: string;
+  role: Role;
+  createdAt: string;
+}
+
+export type RequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface MediaRequest {
+  id: number;
+  kind: MediaKind;
+  key: string;
+  title: string;
+  year: number | null;
+  poster: string | null;
+  language: LanguagePreset;
+  formats: BookFormat[];
+  status: RequestStatus;
+  requestedBy: string;
+  createdAt: string;
+  decidedAt: string | null;
+  note: string | null;
+}
+
+export interface NewRequest {
+  kind: MediaKind;
+  key: string;
+  title: string;
+  year: number | null;
+  poster: string | null;
+  language?: LanguagePreset;
+  formats?: BookFormat[];
+}
+
 export interface AuthState {
   /**
    * Comptes activés dans Réglages › Utilisateurs. Désactivés par défaut :
@@ -102,7 +139,7 @@ export interface AuthState {
    */
   authEnabled: boolean;
   /** Utilisateur courant ; null seulement si les comptes sont activés et que personne n'est connecté. */
-  user: { username: string; role: 'admin' } | null;
+  user: { username: string; role: Role } | null;
   /** L'assistant de première configuration a été terminé (ou passé). */
   setupDone: boolean;
 }
@@ -201,6 +238,12 @@ export interface IndexerAddResult {
 // ─── Recherche et bibliothèque ───────────────────────────────────────────
 
 export type MediaKind = 'movie' | 'series' | 'book';
+
+/**
+ * Langue voulue pour un film ou une série : vos préférences (par défaut),
+ * ou une variante ponctuelle (pour un ami qui préfère la VO, par exemple).
+ */
+export type LanguagePreset = 'default' | 'original' | 'french';
 export type BookFormat = 'eBook' | 'AudioBook';
 
 export interface SearchResult {
@@ -233,6 +276,8 @@ export interface LibraryItem {
   /** « WEBDL-1080p · French », « 12 / 24 épisodes »… */
   detail: string;
   sizeBytes: number;
+  /** Films et séries : choix de langue (null si réglé hors de Motflix). */
+  language: LanguagePreset | null;
 }
 
 export interface AddRequest {
@@ -244,6 +289,8 @@ export interface AddRequest {
   monitor?: 'all' | 'future';
   /** Livres : formats voulus. */
   formats?: BookFormat[];
+  /** Films et séries : langue voulue (par défaut : vos préférences). */
+  language?: LanguagePreset;
 }
 
 export type TorrentAction = 'pause' | 'resume' | 'delete';
@@ -268,6 +315,73 @@ export interface TorrentsResponse {
   downloadSpeed: number;
   uploadSpeed: number;
   torrents: Torrent[];
+}
+
+// ─── Import de fichiers existants ────────────────────────────────────────
+
+export type ImportMode = 'copy' | 'move';
+
+export interface ImportSource {
+  id: string;             // library | inbox | disk:<chemin relatif>
+  label: string;
+  description: string;
+  roots: string[];        // chemins vus par le panel, Radarr et Sonarr (identiques)
+  hostPath: string | null;
+  freeBytes: number | null;
+  totalBytes: number | null;
+  /** Mode imposé (bibliothèque : les fichiers y sont déjà) ou proposé par défaut. */
+  forcedMode: ImportMode | null;
+  defaultMode: ImportMode;
+}
+
+export interface FoundFile { path: string; size: number }
+
+export interface FoundMovie {
+  key: string;            // tmdbId
+  title: string;
+  year: number | null;
+  poster: string | null;
+  inLibrary: boolean;
+  file: FoundFile;        // le plus gros fichier retenu
+  extraFiles: FoundFile[];// doublons ou parties ignorés
+  quality: unknown;
+  languages: unknown;
+  releaseGroup: string | null;
+}
+
+export interface FoundEpisode extends FoundFile { season: number; episodes: number[]; quality: unknown; languages: unknown; releaseGroup: string | null }
+
+export interface FoundSeries {
+  key: string;            // tvdbId
+  title: string;
+  year: number | null;
+  poster: string | null;
+  inLibrary: boolean;
+  episodes: FoundEpisode[];
+  sizeBytes: number;
+}
+
+export interface Unrecognized extends FoundFile { reason: string }
+
+export interface Analysis {
+  sourceId: string;
+  movies: FoundMovie[];
+  series: FoundSeries[];
+  unrecognized: Unrecognized[];
+  skippedKnown: number;
+  totalBytes: number;
+}
+
+export interface ImportResult { title: string; ok: boolean; message: string }
+
+export interface ImportJobState {
+  phase: 'idle' | 'analyzing' | 'ready' | 'importing' | 'done' | 'error';
+  sourceId: string | null;
+  progress: { done: number; total: number; label: string };
+  analysis: Analysis | null;
+  results: ImportResult[];
+  error: string | null;
+  mode: ImportMode | null;
 }
 
 // ─── Réglages ────────────────────────────────────────────────────────────

@@ -1,9 +1,11 @@
 // Éléments communs à la recherche et à la bibliothèque : affiche, ajout, fiche d'un titre.
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
-import type { BookFormat, LibraryItem, LibraryStatus, MediaKind, SearchResult } from '@motflix/shared';
+import type { BookFormat, LanguagePreset, LibraryItem, LibraryStatus, MediaKind, SearchResult } from '@motflix/shared';
 import { api } from './api.ts';
+import { useRole } from './hooks.ts';
 import { bytes, percent } from './format.ts';
 import { useToast } from './ui.tsx';
 
@@ -20,6 +22,21 @@ export const STATUS_BADGE: Record<LibraryStatus, { cls: string; label: string }>
   missing: { cls: 'warn', label: 'Recherché' },
   unreleased: { cls: '', label: 'Pas encore sorti' },
 };
+
+/** Choix de langue pour un titre : vos préférences, ou une variante ponctuelle. */
+export function LanguageSelect({ value, onChange, id, disabled }: {
+  value: LanguagePreset; onChange: (v: LanguagePreset) => void; id: string; disabled?: boolean;
+}) {
+  const prefs = useQuery({ queryKey: ['prefs'], queryFn: api.settings.preferences, staleTime: 60_000 });
+  const order = prefs.data?.languages.join(' › ');
+  return (
+    <select id={id} className="input" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as LanguagePreset)}>
+      <option value="default">Mes préférences{order ? ` (${order})` : ''}</option>
+      <option value="original">Version originale d'abord (VO › VOSTFR › MULTi › VF)</option>
+      <option value="french">Français seulement (VF › MULTi)</option>
+    </select>
+  );
+}
 
 /** Affiche avec repli sur un dégradé titré si l'image manque. */
 export function Poster({ title, src, badge, progress }: {
@@ -55,10 +72,12 @@ export function AddDialog({ item, onClose }: { item: SearchResult; onClose: () =
   const [search, setSearch] = useState(true);
   const [monitor, setMonitor] = useState<'all' | 'future'>('all');
   const [formats, setFormats] = useState<BookFormat[]>(['eBook']);
+  const [language, setLanguage] = useState<LanguagePreset>('default');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const qc = useQueryClient();
   const toast = useToast();
+  const requesting = useRole() !== 'admin';
 
   const toggleFormat = (f: BookFormat) =>
     setFormats((all) => (all.includes(f) ? all.filter((x) => x !== f) : [...all, f]));
@@ -67,7 +86,15 @@ export function AddDialog({ item, onClose }: { item: SearchResult; onClose: () =
     setBusy(true);
     setError(null);
     try {
-      const r = await api.library.add({ kind: item.kind, key: item.key, search, monitor, formats });
+      if (requesting) {
+        // Membre : la demande attend la validation de l'administrateur (sauf validation automatique).
+        const r = await api.requests.create({ kind: item.kind, key: item.key, title: item.title, year: item.year, poster: item.poster, language, formats });
+        toast({ title: r.status === 'approved' ? 'Demande acceptée' : 'Demande envoyée', detail: r.status === 'approved' ? item.title : `${item.title} · en attente de validation` });
+        await qc.invalidateQueries({ queryKey: ['requests'] });
+        onClose();
+        return;
+      }
+      const r = await api.library.add({ kind: item.kind, key: item.key, search, monitor, formats, language });
       toast({ title: r.detail, detail: item.title });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['library'] }),
@@ -85,7 +112,7 @@ export function AddDialog({ item, onClose }: { item: SearchResult; onClose: () =
   return (
     <Dialog onClose={onClose} label={`Ajouter ${item.title}`}>
       <div className="card-head">
-        <h3>{KIND_LABEL[item.kind].add}</h3>
+        <h3>{requesting ? `Demander ${item.kind === 'series' ? 'cette série' : item.kind === 'movie' ? 'ce film' : 'ce livre'}` : KIND_LABEL[item.kind].add}</h3>
         <div className="right"><button className="icon-btn sm" onClick={onClose} aria-label="Fermer"><X className="ic ic-sm" /></button></div>
       </div>
       <div className="modal-body">
@@ -99,7 +126,11 @@ export function AddDialog({ item, onClose }: { item: SearchResult; onClose: () =
         </div>
 
         {item.kind !== 'book' && (
-          <span className="badge accent" style={{ alignSelf: 'flex-start' }}>Selon vos préférences de langue et de qualité (Réglages)</span>
+          <div className="field">
+            <label htmlFor="add-lang">Langue</label>
+            <LanguageSelect id="add-lang" value={language} onChange={setLanguage} />
+            <span className="hint-text">Qualité et taille : selon vos Réglages. La langue peut être changée plus tard.</span>
+          </div>
         )}
         {item.kind === 'series' && (
           <div className="field">
@@ -119,17 +150,18 @@ export function AddDialog({ item, onClose }: { item: SearchResult; onClose: () =
             </div>
           </div>
         )}
-        <label className="setting" style={{ padding: 0, border: 0 }}>
+        {!requesting && <label className="setting" style={{ padding: 0, border: 0 }}>
           <span className="txt"><b>Lancer la recherche maintenant</b>
             <p>Sinon, {KIND_LABEL[item.kind].one === 'série' ? 'elle' : 'il'} sera cherché{KIND_LABEL[item.kind].one === 'série' ? 'e' : ''} lors du prochain passage automatique.</p></span>
           <span className="toggle"><input type="checkbox" checked={search} onChange={(e) => setSearch(e.target.checked)} /><span /></span>
-        </label>
+        </label>}
+        {requesting && <span className="hint-text">L'administrateur reçoit votre demande et l'ajoute à la bibliothèque.</span>}
         {error && <div className="alert" role="alert">{error}</div>}
       </div>
       <div className="modal-foot">
         <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
         <button className="btn btn-primary" onClick={add} disabled={busy || (item.kind === 'book' && !formats.length)}>
-          {busy ? <Loader2 className="ic ic-sm spin" /> : <Plus className="ic ic-sm" />}Ajouter
+          {busy ? <Loader2 className="ic ic-sm spin" /> : <Plus className="ic ic-sm" />}{requesting ? 'Demander' : 'Ajouter'}
         </button>
       </div>
     </Dialog>
@@ -141,10 +173,12 @@ export function AddDialog({ item, onClose }: { item: SearchResult; onClose: () =
 export function ItemDialog({ item, format, onClose }: { item: LibraryItem; format?: BookFormat; onClose: () => void }) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [deleteFiles, setDeleteFiles] = useState(false);
-  const [busy, setBusy] = useState<'search' | 'remove' | null>(null);
+  const [busy, setBusy] = useState<'search' | 'remove' | 'language' | null>(null);
+  const [language, setLanguage] = useState<LanguagePreset | null>(item.language);
   const qc = useQueryClient();
   const toast = useToast();
   const badge = STATUS_BADGE[item.status];
+  const admin = useRole() === 'admin';
 
   async function searchAgain() {
     setBusy('search');
@@ -153,6 +187,20 @@ export function ItemDialog({ item, format, onClose }: { item: LibraryItem; forma
       toast({ title: 'Recherche lancée', detail: item.title });
     } catch (e) {
       toast({ title: 'Recherche impossible', detail: (e as Error).message, error: true });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function changeLanguage(next: LanguagePreset) {
+    setBusy('language');
+    try {
+      await api.library.setLanguage(item.kind, item.id, next);
+      setLanguage(next);
+      toast({ title: 'Langue changée', detail: 'Lancez « Rechercher à nouveau » pour trouver une version dans cette langue.' });
+      await qc.invalidateQueries({ queryKey: ['library'] });
+    } catch (e) {
+      toast({ title: 'Langue non changée', detail: (e as Error).message, error: true });
     } finally {
       setBusy(null);
     }
@@ -188,6 +236,14 @@ export function ItemDialog({ item, format, onClose }: { item: LibraryItem; forma
             {item.overview && <p className="overview">{item.overview}</p>}
           </div>
         </div>
+        {admin && item.kind !== 'book' && (
+          <div className="field">
+            <label htmlFor="item-lang">Langue voulue</label>
+            {language === null
+              ? <span className="dim">Réglée en dehors de Motflix. Choisissez-en une pour la gérer ici :</span> : null}
+            <LanguageSelect id="item-lang" value={language ?? 'default'} onChange={changeLanguage} disabled={busy !== null} />
+          </div>
+        )}
         {confirmRemove && (
           <div className="alert" style={{ flexDirection: 'column' }}>
             <b>Retirer « {item.title} » de la bibliothèque ?</b>
@@ -198,7 +254,7 @@ export function ItemDialog({ item, format, onClose }: { item: LibraryItem; forma
           </div>
         )}
       </div>
-      <div className="modal-foot">
+      {admin && <div className="modal-foot">
         {!confirmRemove ? (
           <>
             <button className="btn btn-ghost btn-err" onClick={() => setConfirmRemove(true)} style={{ marginRight: 'auto' }}>
@@ -216,7 +272,7 @@ export function ItemDialog({ item, format, onClose }: { item: LibraryItem; forma
             </button>
           </>
         )}
-      </div>
+      </div>}
     </Dialog>
   );
 }

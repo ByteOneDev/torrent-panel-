@@ -2,31 +2,38 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  BookOpen, Download, Film, Headphones, LayoutDashboard, LogOut, Menu, Moon, Search, Server, Settings, Shield, Sun, Tv, Wand2,
+  BookOpen, Download, Film, FolderInput, Inbox, Headphones, LayoutDashboard, LogOut, Menu, Moon, Search, Server, Settings, Shield, Sun, Tv, Wand2,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from './api.ts';
-import { useAuthState, useDashboard, useServices } from './hooks.ts';
+import { useAuthState, useDashboard, useRole, useServices } from './hooks.ts';
+import type { Role } from '@motflix/shared';
+import { useQuery } from '@tanstack/react-query';
+import { api as apiClient } from './api.ts';
 import { Logo } from './icons.tsx';
 
-interface NavEntry { to: string; label: string; icon: LucideIcon; soon?: boolean }
+interface NavEntry { to: string; label: string; icon: LucideIcon; soon?: boolean; roles?: Role[] }
 
 const NAV: { label: string; items: NavEntry[] }[] = [
   { label: 'Général', items: [
-    { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
-    { to: '/services', label: 'Services', icon: Server },
+    { to: '/', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin'] },
+    { to: '/services', label: 'Services', icon: Server, roles: ['admin'] },
   ] },
   { label: 'Médias', items: [
-    { to: '/recherche', label: 'Rechercher', icon: Search },
+    { to: '/recherche', label: 'Rechercher', icon: Search, roles: ['admin', 'member'] },
     { to: '/films', label: 'Films', icon: Film },
     { to: '/series', label: 'Séries', icon: Tv },
     { to: '/livres', label: 'Livres', icon: BookOpen },
     { to: '/livres-audio', label: 'Livres audio', icon: Headphones },
+    { to: '/importer', label: 'Importer', icon: FolderInput, roles: ['admin'] },
   ] },
-  { label: 'Activité', items: [{ to: '/telechargements', label: 'Téléchargements', icon: Download }] },
+  { label: 'Activité', items: [
+    { to: '/demandes', label: 'Demandes', icon: Inbox, roles: ['admin', 'member'] },
+    { to: '/telechargements', label: 'Téléchargements', icon: Download },
+  ] },
   { label: 'Configuration', items: [
-    { to: '/reglages', label: 'Réglages', icon: Settings },
-    { to: '/assistant', label: 'Assistant', icon: Wand2 },
+    { to: '/reglages', label: 'Réglages', icon: Settings, roles: ['admin'] },
+    { to: '/assistant', label: 'Assistant', icon: Wand2, roles: ['admin'] },
   ] },
 ];
 
@@ -41,7 +48,7 @@ function useTheme() {
 }
 
 function ServerPill() {
-  const { data } = useServices();
+  const { data } = useServices(useRole() === 'admin');
   const installed = data?.services.filter((s) => s.state !== 'missing') ?? [];
   const online = installed.filter((s) => s.state === 'online').length;
   const problems = installed.filter((s) => s.state === 'unhealthy' || s.state === 'stopped').length;
@@ -58,7 +65,8 @@ function ServerPill() {
 }
 
 function VpnBadge() {
-  const { data } = useDashboard();
+  const role = useRole();
+  const { data } = useDashboard(role === 'admin');
   if (!data?.vpn.enabled) return null;
   const { connected, country } = data.vpn;
   return (
@@ -87,6 +95,11 @@ export function Layout({ title, children }: { title: string; children: ReactNode
   }
 
   const username = auth?.user?.username ?? '';
+  const role = auth?.user?.role ?? 'viewer';
+  const pending = useQuery({
+    queryKey: ['requests'], queryFn: apiClient.requests.list, enabled: role !== 'viewer', refetchInterval: 30_000,
+  }).data?.filter((r) => r.status === 'pending').length ?? 0;
+  const ROLE_LABEL: Record<Role, string> = { admin: 'Administrateur', member: 'Membre', viewer: 'Lecture seule' };
 
   return (
     <div className="app">
@@ -95,9 +108,10 @@ export function Layout({ title, children }: { title: string; children: ReactNode
           <div className="brand-logo"><Logo /></div>
           <div className="brand-name">Motflix</div>
         </div>
-        <ServerPill />
+        {role === 'admin' && <ServerPill />}
         <nav className="nav">
-          {NAV.map((group) => (
+          {NAV.map((group) => ({ ...group, items: group.items.filter((i) => !i.roles || i.roles.includes(role)) }))
+            .filter((group) => group.items.length > 0).map((group) => (
             <div key={group.label}>
               <div className="nav-label">{group.label}</div>
               {group.items.map(({ to, label, icon: Icon, soon }) =>
@@ -108,6 +122,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
                 ) : (
                   <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <Icon className="ic" strokeWidth={1.8} />{label}
+                    {to === '/demandes' && pending > 0 && <span className="count accent-count">{pending}</span>}
                   </NavLink>
                 ),
               )}
@@ -116,7 +131,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
         </nav>
         <div className="sidebar-foot">
           <div className="avatar">{username.slice(0, 1) || '?'}</div>
-          <div className="who"><b>{username}</b><span>Administrateur</span></div>
+          <div className="who"><b>{username}</b><span>{ROLE_LABEL[role]}</span></div>
           <button className="icon-btn sm" onClick={toggleTheme} title="Changer de thème" aria-label="Changer de thème">
             {theme === 'dark' ? <Sun className="ic ic-sm" /> : <Moon className="ic ic-sm" />}
           </button>
@@ -135,7 +150,7 @@ export function Layout({ title, children }: { title: string; children: ReactNode
             <Menu className="ic" />
           </button>
           <h1>{title}</h1>
-          {location.pathname !== '/recherche' && (
+          {location.pathname !== '/recherche' && role !== 'viewer' && (
             <form className="top-search" role="search" onSubmit={(e) => {
               e.preventDefault();
               const q = new FormData(e.currentTarget).get('q')?.toString().trim();

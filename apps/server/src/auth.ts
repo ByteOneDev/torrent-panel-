@@ -9,9 +9,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { hash, verify } from '@node-rs/argon2';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { AuthState } from '@motflix/shared';
+import type { AuthState, Role, UserInfo } from '@motflix/shared';
 import type { Config } from './config.ts';
 import type { Db } from './db.ts';
+import { isAllowedHost, isSameOrigin } from './security.ts';
+import { canAccess } from './permissions.ts';
 
 export const SESSION_COOKIE = 'motflix_session';
 const SESSION_DAYS = 30;
@@ -22,7 +24,9 @@ const MIN_PASSWORD = 8;
 const MAX_FAILURES = 10;
 const FAILURE_WINDOW_MS = 15 * 60_000;
 
-export interface SessionUser { id: number; username: string; role: 'admin' }
+export interface SessionUser { id: number; username: string; role: Role }
+
+const ROLES: Role[] = ['admin', 'member', 'viewer'];
 
 /** Utilisateur implicite quand les comptes sont désactivés. */
 const IMPLICIT_ADMIN: SessionUser = { id: 0, username: 'admin', role: 'admin' };
@@ -71,8 +75,8 @@ export class AuthStore {
   }
 
   /**
-   * Active les comptes avec cet administrateur. Les comptes et sessions précédents
-   * sont remplacés : il n'y a qu'un administrateur pour l'instant.
+   * Active les comptes avec cet administrateur (créé, ou son mot de passe remplacé
+   * s'il existe déjà). Les autres comptes sont conservés ; les sessions sont fermées.
    */
   async enable(username: string, password: string): Promise<SessionUser> {
     validateCredentials(username, password);
@@ -80,13 +84,18 @@ export class AuthStore {
     this.db.exec('BEGIN IMMEDIATE');
     try {
       if (this.authEnabled()) throw new AuthError(409, 'Les comptes sont déjà activés.');
-      this.db.exec('DELETE FROM sessions; DELETE FROM users;');
-      const res = this.db
-        .prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')")
-        .run(username, passwordHash);
+      this.db.exec('DELETE FROM sessions');
+      const existing = this.db.prepare('SELECT id FROM users WHERE username = ?').get(username) as { id: number } | undefined;
+      let id: number;
+      if (existing) {
+        this.db.prepare("UPDATE users SET password_hash = ?, role = 'admin' WHERE id = ?").run(passwordHash, existing.id);
+        id = existing.id;
+      } else {
+        id = Number(this.db.prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')").run(username, passwordHash).lastInsertRowid);
+      }
       this.db.prepare("INSERT INTO settings (key, value) VALUES ('auth_enabled', '1') ON CONFLICT(key) DO UPDATE SET value = '1'").run();
       this.db.exec('COMMIT');
-      return { id: Number(res.lastInsertRowid), username, role: 'admin' };
+      return { id, username, role: 'admin' };
     } catch (e) {
       this.db.exec('ROLLBACK');
       throw e;
@@ -108,11 +117,11 @@ export class AuthStore {
 
   async checkPassword(username: string, password: string): Promise<SessionUser | null> {
     const row = this.db
-      .prepare('SELECT id, username, password_hash FROM users WHERE username = ?')
-      .get(username) as { id: number; username: string; password_hash: string } | undefined;
+      .prepare('SELECT id, username, role, password_hash FROM users WHERE username = ?')
+      .get(username) as { id: number; username: string; role: Role; password_hash: string } | undefined;
     const ok = await verify(row?.password_hash ?? (await this.dummyHash), password).catch(() => false);
     if (!row || !ok) return null;
-    return { id: row.id, username: row.username, role: 'admin' };
+    return { id: row.id, username: row.username, role: row.role };
   }
 
   createSession(userId: number): { token: string; expiresAt: number } {
@@ -129,10 +138,57 @@ export class AuthStore {
   sessionUser(token: string | undefined): SessionUser | null {
     if (!token) return null;
     const row = this.db
-      .prepare(`SELECT u.id, u.username FROM sessions s JOIN users u ON u.id = s.user_id
+      .prepare(`SELECT u.id, u.username, u.role FROM sessions s JOIN users u ON u.id = s.user_id
                 WHERE s.token_hash = ? AND s.expires_at > ?`)
-      .get(sha256(token), Date.now()) as { id: number; username: string } | undefined;
-    return row ? { ...row, role: 'admin' } : null;
+      .get(sha256(token), Date.now()) as SessionUser | undefined;
+    return row ?? null;
+  }
+
+  // ─── Comptes (Réglages › Utilisateurs) ────────────────────────────────
+
+  listUsers(): UserInfo[] {
+    return (this.db.prepare('SELECT id, username, role, created_at FROM users ORDER BY username').all() as
+      { id: number; username: string; role: Role; created_at: string }[])
+      .map((u) => ({ id: u.id, username: u.username, role: u.role, createdAt: `${u.created_at.replace(' ', 'T')}Z` }));
+  }
+
+  async createUser(username: string, password: string, role: Role): Promise<UserInfo> {
+    validateCredentials(username, password);
+    if (!ROLES.includes(role)) throw new AuthError(400, 'Rôle inconnu.');
+    if (this.db.prepare('SELECT 1 FROM users WHERE username = ?').get(username)) {
+      throw new AuthError(409, 'Ce nom d’utilisateur existe déjà.');
+    }
+    const id = Number(this.db.prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)')
+      .run(username, await hash(password), role).lastInsertRowid);
+    return this.listUsers().find((u) => u.id === id)!;
+  }
+
+  private adminCount(exceptId?: number): number {
+    return (this.db.prepare("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND id != ?").get(exceptId ?? -1) as { n: number }).n;
+  }
+
+  async updateUser(id: number, changes: { role?: Role; password?: string }): Promise<void> {
+    const user = this.db.prepare('SELECT id, role FROM users WHERE id = ?').get(id) as { id: number; role: Role } | undefined;
+    if (!user) throw new AuthError(404, 'Utilisateur introuvable.');
+    if (changes.role !== undefined) {
+      if (!ROLES.includes(changes.role)) throw new AuthError(400, 'Rôle inconnu.');
+      if (user.role === 'admin' && changes.role !== 'admin' && this.adminCount(id) === 0) {
+        throw new AuthError(409, 'Il faut au moins un administrateur.');
+      }
+      this.db.prepare('UPDATE users SET role = ? WHERE id = ?').run(changes.role, id);
+    }
+    if (changes.password !== undefined) {
+      if (changes.password.length < MIN_PASSWORD) throw new AuthError(400, `Mot de passe : ${MIN_PASSWORD} caractères minimum.`);
+      this.db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(await hash(changes.password), id);
+      this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id); // reconnexion obligatoire
+    }
+  }
+
+  deleteUser(id: number): void {
+    const user = this.db.prepare('SELECT role FROM users WHERE id = ?').get(id) as { role: Role } | undefined;
+    if (!user) throw new AuthError(404, 'Utilisateur introuvable.');
+    if (user.role === 'admin' && this.adminCount(id) === 0) throw new AuthError(409, 'Il faut au moins un administrateur.');
+    this.db.prepare('DELETE FROM users WHERE id = ?').run(id);
   }
 
   deleteSession(token: string | undefined): void {
@@ -168,12 +224,13 @@ export function registerAuth(app: FastifyInstance, store: AuthStore, config: Con
   app.decorateRequest('user', null);
 
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
+    // Nom de domaine inconnu : probable « DNS rebinding » depuis un site malveillant.
+    if (!isAllowedHost(req.headers.host, config.allowedHostnames)) {
+      return reply.code(421).send({ error: 'Adresse non autorisée. Ajoutez ce nom à PANEL_HOSTNAMES dans le .env.' });
+    }
     // Une requête qui modifie quelque chose doit venir de la page du panel elle-même.
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-      const origin = req.headers.origin;
-      if (origin && new URL(origin).host !== req.headers.host) {
-        return reply.code(403).send({ error: 'Origine refusée.' });
-      }
+    if (req.method !== 'GET' && req.method !== 'HEAD' && !isSameOrigin(req.headers.origin, req.headers.host)) {
+      return reply.code(403).send({ error: 'Origine refusée.' });
     }
     if (!store.authEnabled()) {
       req.user = IMPLICIT_ADMIN;
@@ -183,6 +240,9 @@ export function registerAuth(app: FastifyInstance, store: AuthStore, config: Con
     const url = req.url.split('?')[0] ?? '';
     if (url.startsWith('/api/') && !PUBLIC_ROUTES.has(url) && !req.user) {
       return reply.code(401).send({ error: 'Connexion requise.' });
+    }
+    if (req.user && !canAccess(req.user.role, req.method, req.url)) {
+      return reply.code(403).send({ error: 'Réservé à l’administrateur.' });
     }
   });
 
@@ -229,6 +289,45 @@ export function registerAuth(app: FastifyInstance, store: AuthStore, config: Con
     } catch (e) {
       if (e instanceof AuthError) return reply.code(e.status).send({ error: e.message });
       throw e;
+    }
+  });
+
+  // ─── Comptes (administrateur) ──────────────────────────────────────────
+  const fail = (reply: FastifyReply, e: unknown) => {
+    if (e instanceof AuthError) return reply.code(e.status).send({ error: e.message });
+    throw e;
+  };
+
+  app.get('/api/users', async () => store.listUsers());
+
+  app.post('/api/users', async (req, reply) => {
+    const b = (req.body ?? {}) as { username?: unknown; password?: unknown; role?: unknown };
+    try {
+      return await store.createUser(String(b.username ?? '').trim(), String(b.password ?? ''), b.role as Role);
+    } catch (e) {
+      return fail(reply, e);
+    }
+  });
+
+  app.post<{ Params: { id: string } }>('/api/users/:id', async (req, reply) => {
+    const b = (req.body ?? {}) as { role?: unknown; password?: unknown };
+    try {
+      await store.updateUser(Number(req.params.id), {
+        role: b.role === undefined ? undefined : (b.role as Role),
+        password: typeof b.password === 'string' ? b.password : undefined,
+      });
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, e);
+    }
+  });
+
+  app.delete<{ Params: { id: string } }>('/api/users/:id', async (req, reply) => {
+    try {
+      store.deleteUser(Number(req.params.id));
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, e);
     }
   });
 

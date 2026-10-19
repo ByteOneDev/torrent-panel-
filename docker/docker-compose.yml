@@ -51,6 +51,7 @@ services:
       DOCKER_HOST: http://socket-proxy:2375
       COMPOSE_PROJECT: motflix
       TOOLS_BIND: ${TOOLS_BIND}
+      PANEL_HOSTNAMES: ${PANEL_HOSTNAMES:-}
       MOTFLIX_HOST_DIR: ${MOTFLIX_DIR:-}
       MEDIA_HOST_PATH: ${DATA_DIR}
       RADARR_API_KEY: ${RADARR_API_KEY}

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 import type { BookFormat, LibraryItem, LibraryStatus, MediaKind } from '@motflix/shared';
 import { api } from '../api.ts';
+import { useRole } from '../hooks.ts';
 import { Layout } from '../Layout.tsx';
 import { ItemDialog, KIND_LABEL, Poster, STATUS_BADGE } from '../media.tsx';
 
@@ -24,6 +25,8 @@ export function LibraryPage({ kind, format, title }: { kind: MediaKind; format?:
   const [filter, setFilter] = useState<Filter>('all');
   const [text, setText] = useState('');
   const [open, setOpen] = useState<LibraryItem | null>(null);
+  const role = useRole();
+  const canAdd = role !== 'viewer';
 
   const items = useMemo(() => {
     const t = text.trim().toLowerCase();
@@ -48,7 +51,7 @@ export function LibraryPage({ kind, format, title }: { kind: MediaKind; format?:
             <Search className="ic ic-sm dim" />
             <input placeholder="Filtrer…" value={text} onChange={(e) => setText(e.target.value)} aria-label="Filtrer la bibliothèque" />
           </label>
-          <Link className="btn btn-primary" to={`/recherche?kind=${kind}`}><Plus className="ic ic-sm" />Ajouter</Link>
+          {canAdd && <Link className="btn btn-primary" to={`/recherche?kind=${kind}`}><Plus className="ic ic-sm" />{role === 'admin' ? 'Ajouter' : 'Demander'}</Link>}
         </div>
       </div>
 
@@ -65,9 +68,10 @@ export function LibraryPage({ kind, format, title }: { kind: MediaKind; format?:
             </div>
           </button>
         ))}
-        {q.data && (
+        {q.data && canAdd && (
           <Link className="poster-add" to={`/recherche?kind=${kind}`}>
-            <div><Plus className="ic" /><div style={{ marginTop: 6, fontWeight: 550 }}>{KIND_LABEL[kind].add}</div></div>
+            <div><Plus className="ic" /><div style={{ marginTop: 6, fontWeight: 550 }}>
+              {role === 'admin' ? KIND_LABEL[kind].add : KIND_LABEL[kind].add.replace('Ajouter', 'Demander')}</div></div>
           </Link>
         )}
       </div>

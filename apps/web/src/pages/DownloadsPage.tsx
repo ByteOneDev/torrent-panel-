@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Loader2, Pause, Play, Trash2 } from 'lucide-react';
 import type { Torrent, TorrentAction } from '@motflix/shared';
 import { api } from '../api.ts';
+import { useRole } from '../hooks.ts';
 import { ago, bytes, duration, percent, speed } from '../format.ts';
 import { Layout } from '../Layout.tsx';
 import { Bar, ConfirmDialog, useToast } from '../ui.tsx';
@@ -26,6 +27,7 @@ export function DownloadsPage() {
   const [deleteFiles, setDeleteFiles] = useState(false);
   const qc = useQueryClient();
   const toast = useToast();
+  const admin = useRole() === 'admin';
 
   async function act(hash: string, action: TorrentAction, files = false) {
     setBusy(hash + action);
@@ -49,7 +51,7 @@ export function DownloadsPage() {
           <div className="speed"><ArrowDown className="ic" /><b className="num">{data ? speed(data.downloadSpeed) : '—'}</b><span className="dim">réception</span></div>
           <div className="speed up"><ArrowUp className="ic" /><b className="num">{data ? speed(data.uploadSpeed) : '—'}</b><span className="dim">envoi</span></div>
           <div className="right">
-            {data && data.torrents.length > 0 && (running
+            {admin && data && data.torrents.length > 0 && (running
               ? <button className="btn" onClick={() => act('all', 'pause')} disabled={busy !== null}><Pause className="ic ic-sm" />Tout mettre en pause</button>
               : <button className="btn" onClick={() => act('all', 'resume')} disabled={busy !== null}><Play className="ic ic-sm" />Tout reprendre</button>)}
           </div>
@@ -84,7 +86,7 @@ export function DownloadsPage() {
                     </td>
                     <td className="hide-sm"><span className={`badge ${phase.cls}`}>{phase.label}</span></td>
                     <td className="acts">
-                      {busy?.startsWith(t.hash) ? <Loader2 className="ic ic-sm spin dim" /> : (
+                      {!admin ? null : busy?.startsWith(t.hash) ? <Loader2 className="ic ic-sm spin dim" /> : (
                         <>
                           <button className="btn btn-ghost btn-sm" onClick={() => act(t.hash, paused ? 'resume' : 'pause')}
                             aria-label={paused ? `Reprendre ${t.name}` : `Mettre en pause ${t.name}`} title={paused ? 'Reprendre' : 'Pause'}>

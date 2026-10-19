@@ -257,6 +257,8 @@ mkdir_owned "$DATA_DIR"
 for kind in films series livres livres-audio; do
   mkdir -p "$DATA_DIR/torrents/$kind" "$DATA_DIR/media/$kind"
 done
+# Dossier où déposer des films ou séries à faire ranger par Motflix (page Importer).
+mkdir -p "$DATA_DIR/a-importer"
 # Corbeille de Radarr et Sonarr (fichiers supprimés gardés 7 jours).
 mkdir -p "$DATA_DIR/media/.corbeille/films" "$DATA_DIR/media/.corbeille/series"
 mkdir -p "$INSTALL_DIR/logs"

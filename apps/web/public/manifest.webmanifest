@@ -1,13 +1,25 @@
 {
+  "id": "/",
   "name": "Motflix",
   "short_name": "Motflix",
-  "description": "Panel d'administration de vos films, séries et livres",
+  "description": "Vos films, séries et livres, réunis dans un seul panel",
   "lang": "fr",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0c0f15",
   "theme_color": "#0c0f15",
+  "categories": ["entertainment", "utilities"],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Rechercher", "url": "/recherche", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Téléchargements", "url": "/telechargements", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ]
 }

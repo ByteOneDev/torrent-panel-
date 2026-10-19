@@ -107,6 +107,7 @@ a { color: inherit; text-decoration: none; }
 .nav-item.active .ic { color: var(--accent); }
 .nav-item.soon { opacity: .5; cursor: default; }
 .nav-item.soon:hover { background: none; color: var(--text-2); }
+.nav-item .count.accent-count { background: var(--accent); color: var(--on-accent); }
 .nav-item .count { margin-left: auto; font-size: 11px; background: var(--surface-3); color: var(--text-2); padding: 1px 7px; border-radius: 99px; }
 
 .sidebar-foot { display: flex; align-items: center; gap: 10px; padding: 10px 8px 0; border-top: 1px solid var(--border); }

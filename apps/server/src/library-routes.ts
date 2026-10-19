@@ -1,18 +1,18 @@
 // Routes : recherche, ajout, bibliothèque et téléchargements.
 import type { FastifyInstance } from 'fastify';
-import type { AddRequest, BookFormat, LibraryItem, SearchResult, TorrentAction, TorrentsResponse } from '@motflix/shared';
+import type { AddRequest, BookFormat, LanguagePreset, LibraryItem, SearchResult, TorrentAction, TorrentsResponse } from '@motflix/shared';
 import type { Config } from './config.ts';
 import { QbittorrentClient } from './dashboard.ts';
-import { Library, LibraryError } from './library.ts';
+import { LibraryError, type Library } from './library.ts';
 import { ToolError } from './setup/http.ts';
 import { listTorrents, torrentAction, validHashes } from './torrents.ts';
 import { createJournal } from './journal.ts';
 
 const KINDS = new Set(['movie', 'series', 'book']);
 const FORMATS = new Set<BookFormat>(['eBook', 'AudioBook']);
+const PRESETS = new Set<LanguagePreset>(['default', 'original', 'french']);
 
-export function registerLibrary(app: FastifyInstance, { config }: { config: Config }) {
-  const library = new Library(config);
+export function registerLibrary(app: FastifyInstance, { config, library }: { config: Config; library: Library }) {
   const journal = createJournal(config.dataDir);
   const qbt = new QbittorrentClient(config);
 
@@ -40,7 +40,8 @@ export function registerLibrary(app: FastifyInstance, { config }: { config: Conf
     if (!b.kind || !KINDS.has(b.kind) || typeof b.key !== 'string' || !b.key) return reply.code(400).send({ error: 'Demande invalide.' });
     const formats = Array.isArray(b.formats) ? b.formats.filter((f): f is BookFormat => FORMATS.has(f as BookFormat)) : undefined;
     return guard(reply, async () => {
-      const detail = await library.add({ kind: b.kind!, key: b.key!, search: b.search !== false, monitor: b.monitor === 'future' ? 'future' : 'all', formats });
+      const language = PRESETS.has(b.language as LanguagePreset) ? b.language : 'default';
+      const detail = await library.add({ kind: b.kind!, key: b.key!, search: b.search !== false, monitor: b.monitor === 'future' ? 'future' : 'all', formats, language });
       req.log.info({ kind: b.kind, key: b.key, user: req.user?.username }, `Bibliothèque : ajout (${detail})`);
       await journal(`Ajout ${b.kind} ${b.key} : ${detail}`, req.user?.username);
       return { detail };
@@ -70,6 +71,17 @@ export function registerLibrary(app: FastifyInstance, { config }: { config: Conf
       const format = req.query.format === 'AudioBook' ? 'AudioBook' : 'eBook';
       return guard(reply, async () => { await library.searchAgain(req.params.kind as 'movie', req.params.id, format); return { ok: true }; });
     });
+
+  app.put<{ Params: { kind: string; id: string } }>('/api/library/:kind/:id/language', async (req, reply) => {
+    const language = (req.body as { language?: unknown })?.language as LanguagePreset;
+    if (req.params.kind !== 'movie' && req.params.kind !== 'series') return reply.code(404).send({ error: 'Type inconnu.' });
+    if (!PRESETS.has(language)) return reply.code(400).send({ error: 'Langue inconnue.' });
+    return guard(reply, async () => {
+      await library.setLanguage(req.params.kind as 'movie', req.params.id, language);
+      await journal(`Langue de ${req.params.kind} ${req.params.id} : ${language}`, req.user?.username);
+      return { ok: true };
+    });
+  });
 
   app.delete<{ Params: { kind: string; id: string }; Querystring: { deleteFiles?: string; format?: string } }>(
     '/api/library/:kind/:id', async (req, reply) => {

@@ -1,19 +1,19 @@
 // Recherche, ajout et bibliothèque : films (Radarr), séries (Sonarr), livres (LazyLibrarian).
-import type { AddRequest, BookFormat, LibraryItem, LibraryStatus, SearchResult } from '@motflix/shared';
+import type { AddRequest, BookFormat, LanguagePreset, LibraryItem, LibraryStatus, SearchResult } from '@motflix/shared';
 import type { Config } from './config.ts';
 import { clients } from './setup/job.ts';
-import { motflixProfileId } from './setup/profiles.ts';
+import { presetOfProfile, profileIdFor } from './setup/profiles.ts';
 import { ToolError, type JsonClient } from './setup/http.ts';
 
 interface ArrImage { coverType: string; remoteUrl?: string; url?: string }
 interface ArrMovie {
-  id?: number; title: string; year?: number; tmdbId: number; overview?: string; studio?: string;
+  id?: number; title: string; year?: number; tmdbId: number; overview?: string; studio?: string; qualityProfileId?: number;
   images?: ArrImage[]; remotePoster?: string; hasFile?: boolean; isAvailable?: boolean; sizeOnDisk?: number;
   movieFile?: { quality?: { quality?: { name?: string } }; languages?: { name: string }[]; size?: number };
   [k: string]: unknown;
 }
 interface ArrSeries {
-  id?: number; title: string; year?: number; tvdbId: number; overview?: string; network?: string; images?: ArrImage[];
+  id?: number; title: string; year?: number; tvdbId: number; overview?: string; network?: string; images?: ArrImage[]; qualityProfileId?: number;
   remotePoster?: string; status?: string;
   statistics?: { episodeFileCount: number; episodeCount: number; totalEpisodeCount: number; sizeOnDisk: number; percentOfEpisodes: number };
   [k: string]: unknown;
@@ -157,8 +157,8 @@ export class Library {
     return done;
   }
 
-  private async profileId(api: JsonClient): Promise<number> {
-    const id = await motflixProfileId(api);
+  private async profileId(api: JsonClient, preset: LanguagePreset = 'default'): Promise<number> {
+    const id = await profileIdFor(api, preset);
     if (id !== null) return id;
     const profiles = await api.get<{ id: number }[]>('/qualityprofile');
     if (!profiles[0]) throw new LibraryError(409, "Aucun profil de qualité : lancez l'assistant.");
@@ -170,7 +170,7 @@ export class Library {
     const movie = await api.get<ArrMovie>(`/movie/lookup/tmdb?tmdbId=${encodeURIComponent(req.key)}`);
     if (movie.id) throw new LibraryError(409, `${movie.title} est déjà dans votre bibliothèque.`);
     await api.post('/movie', {
-      ...movie, qualityProfileId: await this.profileId(api), rootFolderPath: '/data/media/films',
+      ...movie, qualityProfileId: await this.profileId(api, req.language), rootFolderPath: '/data/media/films',
       monitored: true, minimumAvailability: 'released',
       addOptions: { searchForMovie: req.search, monitor: 'movieOnly' },
     });
@@ -183,7 +183,7 @@ export class Library {
     if (!series) throw new LibraryError(404, 'Série introuvable.');
     if (series.id) throw new LibraryError(409, `${series.title} est déjà dans votre bibliothèque.`);
     await api.post('/series', {
-      ...series, qualityProfileId: await this.profileId(api), rootFolderPath: '/data/media/series',
+      ...series, qualityProfileId: await this.profileId(api, req.language), rootFolderPath: '/data/media/series',
       monitored: true, seasonFolder: true, seriesType: 'standard',
       addOptions: {
         monitor: req.monitor === 'future' ? 'future' : 'all',
@@ -231,7 +231,9 @@ export class Library {
   }
 
   async movies(): Promise<LibraryItem[]> {
-    const [movies, queue] = await Promise.all([this.api.radarr.get<ArrMovie[]>('/movie'), this.queue(this.api.radarr)]);
+    const [movies, queue, profiles] = await Promise.all([
+      this.api.radarr.get<ArrMovie[]>('/movie'), this.queue(this.api.radarr), this.api.radarr.get<{ id: number; name: string }[]>('/qualityprofile'),
+    ]);
     return movies.map((m): LibraryItem => {
       const q = queue.find((r) => r.movieId === m.id);
       let status: LibraryStatus = m.hasFile ? 'available' : m.isAvailable === false ? 'unreleased' : 'missing';
@@ -242,14 +244,17 @@ export class Library {
         kind: 'movie', id: String(m.id), title: clean(m.title), year: m.year || null, subtitle: m.studio ?? null,
         poster: poster(m.images), overview: m.overview ?? '', status,
         progress: q && q.size > 0 ? 1 - q.sizeleft / q.size : null,
-        detail: f ? [f.quality?.quality?.name, langs].filter(Boolean).join(' · ') : statusText(status),
+        detail: f ? [qualityLabel(f.quality?.quality?.name), langs].filter(Boolean).join(' · ') : statusText(status),
         sizeBytes: m.sizeOnDisk ?? 0,
+        language: m.qualityProfileId ? presetOfProfile(profiles, m.qualityProfileId) : null,
       };
     }).sort(byTitle);
   }
 
   async series(): Promise<LibraryItem[]> {
-    const [list, queue] = await Promise.all([this.api.sonarr.get<ArrSeries[]>('/series'), this.queue(this.api.sonarr)]);
+    const [list, queue, profiles] = await Promise.all([
+      this.api.sonarr.get<ArrSeries[]>('/series'), this.queue(this.api.sonarr), this.api.sonarr.get<{ id: number; name: string }[]>('/qualityprofile'),
+    ]);
     return list.map((s): LibraryItem => {
       const st = s.statistics;
       const have = st?.episodeFileCount ?? 0;
@@ -265,6 +270,7 @@ export class Library {
         progress: size > 0 ? 1 - left / size : null,
         detail: total ? `${have} / ${total} épisodes` : statusText(status),
         sizeBytes: st?.sizeOnDisk ?? 0,
+        language: s.qualityProfileId ? presetOfProfile(profiles, s.qualityProfileId) : null,
       };
     }).sort(byTitle);
   }
@@ -280,13 +286,23 @@ export class Library {
         return {
           kind: 'book', id: b.BookID, title: b.BookName, year: yearOf(b.BookDate), subtitle: b.AuthorName,
           poster: b.BookImg ? `/api/library/books/${encodeURIComponent(b.BookID)}/cover` : null,
-          overview: '', status, progress: null, detail: statusText(status), sizeBytes: 0,
+          overview: '', status, progress: null, detail: statusText(status), sizeBytes: 0, language: null,
         } satisfies LibraryItem;
       })
       .sort(byTitle);
   }
 
   // ─── Actions ──────────────────────────────────────────────────────────
+
+  /** Change la langue voulue d'un film ou d'une série (son profil). */
+  async setLanguage(kind: 'movie' | 'series', id: string, preset: LanguagePreset): Promise<void> {
+    const api = kind === 'movie' ? this.api.radarr : this.api.sonarr;
+    const path = kind === 'movie' ? '/movie' : '/series';
+    const profileId = await profileIdFor(api, preset);
+    if (profileId === null) throw new LibraryError(409, "Profils de langue absents : lancez l'assistant.");
+    const item = await api.get<Record<string, unknown>>(`${path}/${Number(id)}`);
+    await api.put(`${path}/${Number(id)}`, { ...item, qualityProfileId: profileId });
+  }
 
   async searchAgain(kind: 'movie' | 'series' | 'book', id: string, format?: BookFormat): Promise<void> {
     if (kind === 'movie') await this.api.radarr.post('/command', { name: 'MoviesSearch', movieIds: [Number(id)] });
@@ -307,6 +323,9 @@ export class Library {
 const BOOK_STATES = new Set(['Wanted', 'Snatched', 'Open', 'Have']);
 const inBookLibrary = (b: LLBook) => BOOK_STATES.has(b.Status) || BOOK_STATES.has(b.AudioStatus);
 const byTitle = (a: LibraryItem, b: LibraryItem) => a.title.localeCompare(b.title, 'fr');
+
+/** « Unknown » : Radarr ne déduit la qualité que du nom du fichier. */
+const qualityLabel = (name?: string) => (!name ? undefined : name === 'Unknown' ? 'Qualité inconnue' : name);
 
 function statusText(s: LibraryStatus): string {
   return { available: 'Disponible', partial: 'En partie', downloading: 'En téléchargement', missing: 'Recherché', unreleased: 'Pas encore sorti' }[s];

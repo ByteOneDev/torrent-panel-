@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { LogLine, ServicesResponse } from '@motflix/shared';
+import type { LogLine, Role, ServicesResponse } from '@motflix/shared';
 import { api } from './api.ts';
 
 const REFRESH_MS = 5_000;
@@ -9,6 +9,11 @@ const MAX_LOG_LINES = 2_000;
 
 export const useAuthState = () =>
   useQuery({ queryKey: ['auth'], queryFn: api.authState, staleTime: Infinity, retry: 1 });
+
+/** Rôle de la personne connectée (administrateur quand les comptes sont désactivés). */
+export function useRole(): Role {
+  return useAuthState().data?.user?.role ?? 'viewer';
+}
 
 /** Historique CPU / mémoire par service, alimenté par les rafraîchissements successifs. */
 const history = new Map<string, { cpu: number[]; mem: number[] }>();
@@ -25,15 +30,16 @@ function recordHistory(data: ServicesResponse) {
 
 export const serviceHistory = (id: string) => history.get(id) ?? { cpu: [], mem: [] };
 
-export const useServices = () =>
+export const useServices = (enabled = true) =>
   useQuery({
     queryKey: ['services'],
     queryFn: () => api.services().then(recordHistory),
     refetchInterval: REFRESH_MS,
+    enabled,
   });
 
-export const useDashboard = () =>
-  useQuery({ queryKey: ['dashboard'], queryFn: api.dashboard, refetchInterval: REFRESH_MS });
+export const useDashboard = (enabled = true) =>
+  useQuery({ queryKey: ['dashboard'], queryFn: api.dashboard, refetchInterval: REFRESH_MS, enabled });
 
 export type LogStatus = 'connecting' | 'live' | 'ended' | 'error';
 

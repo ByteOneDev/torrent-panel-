@@ -1,3 +1,4 @@
+# Réglages propres à macOS (choisi par install.sh via COMPOSE_FILE).
 # Plex sur macOS : Docker tourne dans une VM, le réseau hôte n'est pas joignable.
 # On publie le port principal de Plex à la place.
 services:
@@ -6,6 +7,20 @@ services:
     ports:
       - 32400:32400
 
+  # Disques branchés (/Volumes) visibles pour l'import. Docker Desktop partage /Volumes
+  # par défaut ; avec Colima, il faut l'ajouter à ses montages.
   motflix:
     environment:
       PLEX_URL: http://plex:32400
+      IMPORT_LAYOUT: flat
+      IMPORT_HOST_PATH: /Volumes
+    volumes:
+      - /Volumes:/import:ro
+
+  radarr:
+    volumes:
+      - /Volumes:/import
+
+  sonarr:
+    volumes:
+      - /Volumes:/import

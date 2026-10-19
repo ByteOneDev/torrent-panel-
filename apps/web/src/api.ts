@@ -1,5 +1,5 @@
 import type {
-  AddRequest, ApplyResult, AuthState, BookFormat, LibraryItem, MediaKind, SearchResult, TorrentAction, TorrentsResponse, ConfiguredIndexer, DashboardResponse, DownloadSettings, ServiceAccess, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
+  AddRequest, ApplyResult, AuthState, MediaRequest, NewRequest, Role, UserInfo, BookFormat, ImportJobState, ImportMode, ImportSource, LanguagePreset, LibraryItem, MediaKind, SearchResult, TorrentAction, TorrentsResponse, ConfiguredIndexer, DashboardResponse, DownloadSettings, ServiceAccess, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
   ServicesResponse, SetupInfo, SetupRun, VpnSettings,
 } from '@motflix/shared';
 
@@ -11,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: 'GET' | 'POST' | 'DELETE', path: string, body?: unknown): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -48,8 +48,33 @@ export const api = {
     books: (format: BookFormat) => call<LibraryItem[]>('GET', `/api/library/books?format=${format}`),
     searchAgain: (kind: MediaKind, id: string, format?: BookFormat) =>
       call<{ ok: true }>('POST', `/api/library/${kind}/${encodeURIComponent(id)}/search${format ? `?format=${format}` : ''}`, {}),
+    setLanguage: (kind: MediaKind, id: string, language: LanguagePreset) =>
+      call<{ ok: true }>('PUT', `/api/library/${kind}/${encodeURIComponent(id)}/language`, { language }),
     remove: (kind: MediaKind, id: string, deleteFiles: boolean, format?: BookFormat) =>
       call<{ ok: true }>('DELETE', `/api/library/${kind}/${encodeURIComponent(id)}?deleteFiles=${deleteFiles}${format ? `&format=${format}` : ''}`),
+  },
+  users: {
+    list: () => call<UserInfo[]>('GET', '/api/users'),
+    create: (username: string, password: string, role: Role) => call<UserInfo>('POST', '/api/users', { username, password, role }),
+    update: (id: number, changes: { role?: Role; password?: string }) => call<{ ok: true }>('POST', `/api/users/${id}`, changes),
+    remove: (id: number) => call<{ ok: true }>('DELETE', `/api/users/${id}`),
+  },
+  requests: {
+    list: () => call<MediaRequest[]>('GET', '/api/requests'),
+    create: (r: NewRequest) => call<MediaRequest>('POST', '/api/requests', r),
+    approve: (id: number) => call<MediaRequest>('POST', `/api/requests/${id}/approve`, {}),
+    reject: (id: number, note?: string) => call<MediaRequest>('POST', `/api/requests/${id}/reject`, { note }),
+    cancel: (id: number) => call<{ ok: true }>('DELETE', `/api/requests/${id}`),
+    settings: () => call<{ autoApprove: boolean }>('GET', '/api/settings/requests'),
+    saveSettings: (autoApprove: boolean) => call<{ autoApprove: boolean }>('POST', '/api/settings/requests', { autoApprove }),
+  },
+  import: {
+    sources: () => call<ImportSource[]>('GET', '/api/import/sources'),
+    status: () => call<ImportJobState>('GET', '/api/import/status'),
+    analyze: (sourceId: string) => call<ImportJobState>('POST', '/api/import/analyze', { sourceId }),
+    run: (movies: string[], series: string[], mode: ImportMode, upgrade: boolean) =>
+      call<ImportJobState>('POST', '/api/import/run', { movies, series, mode, upgrade }),
+    reset: () => call<ImportJobState>('POST', '/api/import/reset', {}),
   },
   downloads: {
     list: () => call<TorrentsResponse>('GET', '/api/downloads'),

@@ -17,9 +17,14 @@ export interface Config {
   mediaPath: string;    // dossier /data partagé avec les outils
   mediaHostPath: string | null;  // le même dossier, vu depuis la machine (affichage)
   hostDir: string | null;        // dossier d'installation sur la machine (commandes à afficher)
+  importPath: string;            // disques branchés, vus dans les conteneurs (/import)
+  importHostPath: string | null; // le même dossier sur la machine (/Volumes ou /media)
+  importLayout: 'flat' | 'user'; // macOS : /Volumes/<disque> ; Linux : /media/<utilisateur>/<disque>
   dockerHost: string;   // unix:///… ou http://socket-proxy:2375
   composeProject: string;
   secureCookies: boolean;
+  /** Noms de domaine supplémentaires acceptés (en plus des IP et noms du réseau local). */
+  allowedHostnames: string[];
   toolsExposed: boolean;
   urls: {
     radarr: string; sonarr: string; prowlarr: string; lazylibrarian: string;
@@ -39,9 +44,13 @@ export function loadConfig(): Config {
     mediaPath: env('MEDIA_PATH', '/data'),
     mediaHostPath: env('MEDIA_HOST_PATH') || null,
     hostDir: env('MOTFLIX_HOST_DIR') || null,
+    importPath: env('IMPORT_PATH', '/import'),
+    importHostPath: env('IMPORT_HOST_PATH') || null,
+    importLayout: env('IMPORT_LAYOUT') === 'user' ? 'user' : 'flat',
     dockerHost: env('DOCKER_HOST', 'unix:///var/run/docker.sock'),
     composeProject: env('COMPOSE_PROJECT', 'motflix'),
     secureCookies: env('SECURE_COOKIES') === 'true',
+    allowedHostnames: env('PANEL_HOSTNAMES').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean),
     toolsExposed: env('TOOLS_BIND', '127.0.0.1') !== '127.0.0.1',
     urls: {
       radarr: env('RADARR_URL', 'http://radarr:7878'),

@@ -17,6 +17,9 @@ import { serviceAccess } from './access.ts';
 import { createJournal } from './journal.ts';
 import { registerSettings } from './settings-routes.ts';
 import { registerLibrary } from './library-routes.ts';
+import { registerImport } from './import-routes.ts';
+import { registerRequests } from './requests-routes.ts';
+import { Library } from './library.ts';
 
 export interface AppDeps {
   config: Config;
@@ -40,6 +43,12 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'same-origin');
+    // Seuls les scripts du panel s'exécutent ; images des fiches (TMDB, TVDB, OpenLibrary) autorisées.
+    reply.header('Content-Security-Policy', [
+      "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data: https:", "connect-src 'self'",
+      "frame-ancestors 'none'", "base-uri 'none'", "form-action 'self'", "object-src 'none'",
+    ].join('; '));
   });
 
   const auth = new AuthStore(db);
@@ -78,7 +87,10 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
   const settings = new Settings(db);
   registerSetup(app, { config, settings, services });
   registerSettings(app, { config, settings, services });
-  registerLibrary(app, { config });
+  const library = new Library(config);
+  registerLibrary(app, { config, library });
+  registerRequests(app, { config, db, settings, library });
+  registerImport(app, { config });
 
   app.get<{ Params: { id: string } }>('/api/services/:id/access', async (req, reply) => {
     const access = serviceAccess(req.params.id, config, settings);
