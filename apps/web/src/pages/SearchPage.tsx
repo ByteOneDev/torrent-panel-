@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Check, Loader2, Search } from 'lucide-react';
 import type { MediaKind, SearchResult } from '@motflix/shared';
 import { api } from '../api.ts';
@@ -22,11 +22,21 @@ export function SearchPage() {
 
   useEffect(() => setText(q), [q]);
 
+  // La recherche part toute seule quand on arrête de taper.
+  useEffect(() => {
+    const t = text.trim();
+    if (t === q || (t.length > 0 && t.length < 2)) return;
+    const timer = setTimeout(() => setParams({ kind, q: t }, { replace: true }), 450);
+    return () => clearTimeout(timer);
+  }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const results = useQuery({
     queryKey: ['search', kind, q],
     queryFn: () => api.search(kind, q),
     enabled: q.trim().length >= 2,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+    retry: false,
   });
 
   const go = (next: { kind?: MediaKind; q?: string }) =>
@@ -47,11 +57,17 @@ export function SearchPage() {
         </div>
       </div>
 
-      {q.length < 2 && <div className="empty">Tapez au moins deux lettres, puis Entrée.</div>}
-      {results.error && <div className="alert">{(results.error as Error).message}</div>}
+      {q.length < 2 && <div className="empty">Tapez au moins deux lettres : la recherche se lance toute seule.</div>}
+      {results.isFetching && !results.data && <div className="empty"><Loader2 className="ic ic-sm spin" /> Recherche en cours…</div>}
+      {results.error && !results.isFetching && (
+        <div className="alert" role="alert">
+          {(results.error as Error).message}
+          <button className="btn btn-sm" style={{ marginLeft: 'auto' }} onClick={() => results.refetch()}>Réessayer</button>
+        </div>
+      )}
       {results.data && !results.data.length && <div className="empty">Aucun résultat pour « {q} ».</div>}
 
-      <div className="posters">
+      <div className="posters" style={results.isPlaceholderData ? { opacity: .5 } : undefined}>
         {results.data?.map((r) => (
           <button key={r.key} className="poster" onClick={() => !r.inLibrary && setAdding(r)} disabled={r.inLibrary}
             title={r.inLibrary ? 'Déjà dans votre bibliothèque' : `Ajouter ${r.title}`}>

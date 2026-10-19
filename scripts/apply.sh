@@ -43,6 +43,7 @@ write_result() {
 
 # ─── 1. Lecture et vérification (rien n'est écrit si une ligne est refusée) ──
 vpn_enabled=''
+plex_claim=''
 updates=''
 while IFS= read -r line; do
   [ -n "$line" ] || continue
@@ -52,6 +53,9 @@ while IFS= read -r line; do
     ID) id=$value ;;
     VPN_ENABLED)
       case "$value" in 0|1) vpn_enabled=$value ;; *) write_result 0 "Valeur refusée pour VPN_ENABLED"; exit 1 ;; esac ;;
+    PLEX_CLAIM)
+      if printf '%s' "$value" | grep -Eq '^claim-[A-Za-z0-9_-]+$'; then plex_claim=$value
+      else write_result 0 "Code Plex refusé"; exit 1; fi ;;
     VPN_PROVIDER|VPN_TYPE|VPN_COUNTRIES|WIREGUARD_PRIVATE_KEY|WIREGUARD_ADDRESSES|OPENVPN_USER|OPENVPN_PASSWORD|VPN_PORT_FORWARDING|VPN_PORT_FORWARD_ONLY)
       case "$value" in
         *"'"*|*'"'*|*'`'*|*'$'*|*\\*) write_result 0 "Valeur refusée pour $key"; exit 1 ;;
@@ -65,6 +69,23 @@ $content
 EOF
 
 [ -n "$id" ] || { write_result 0 "Demande sans identifiant"; exit 1; }
+
+# ─── Liaison de Plex au compte ───────────────────────────────────────────
+# Plex n'accepte d'être réclamé que depuis sa propre machine : on passe par le conteneur.
+if [ -n "$plex_claim" ]; then
+  step "Liaison de Plex au compte"
+  if ! ensure_docker_running; then write_result 0 "Docker ne répond pas"; exit 1; fi
+  code=$(dkr exec motflix-plex curl -s -o /dev/null -w '%{http_code}' -X POST \
+    "http://127.0.0.1:32400/myplex/claim?token=$plex_claim" 2>/dev/null || true)
+  if [ "$code" = 200 ]; then
+    write_result 1 "Serveur Plex lié à votre compte"
+  else
+    write_result 0 "Plex a refusé la liaison (code ${code:-inconnu}). Réessayez : le code expire après quelques minutes."
+    exit 1
+  fi
+  exit 0
+fi
+
 [ -n "$vpn_enabled" ] || { write_result 0 "Demande incomplète"; exit 1; }
 
 # ─── 2. Mise à jour du .env ──────────────────────────────────────────────

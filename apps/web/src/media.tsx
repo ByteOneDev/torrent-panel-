@@ -26,11 +26,15 @@ export function Poster({ title, src, badge, progress }: {
   title: string; src: string | null; badge?: { cls: string; label: string }; progress?: number | null;
 }) {
   const [broken, setBroken] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   return (
     <div className="poster-art">
-      {src && !broken && <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />}
+      {src && !broken && (
+        <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" className={loaded ? 'loaded' : ''}
+          onLoad={() => setLoaded(true)} onError={() => setBroken(true)} />
+      )}
       {badge && <span className={`badge ${badge.cls}`}>{badge.label}</span>}
-      {(!src || broken) && <strong>{title}</strong>}
+      {(!src || broken || !loaded) && <strong>{title}</strong>}
       {progress !== null && progress !== undefined && <div className="prog"><i style={{ width: `${progress * 100}%` }} /></div>}
     </div>
   );

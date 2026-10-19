@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import type { LanguageTag, MediaPreferences, Resolution } from '@motflix/shared';
 
 const LANG_INFO: Record<LanguageTag, { name: string; detail: string }> = {
@@ -7,6 +7,8 @@ const LANG_INFO: Record<LanguageTag, { name: string; detail: string }> = {
   VO: { name: 'VO — Version originale', detail: 'Sans piste ni sous-titres français' },
   VOSTFR: { name: 'VOSTFR', detail: 'Version originale sous-titrée en français' },
 };
+
+const ALL: LanguageTag[] = ['VF', 'MULTi', 'VO', 'VOSTFR'];
 
 const gb = (v: number) => `${v.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Go`;
 
@@ -17,6 +19,9 @@ export function PreferencesStep({ prefs, onChange, embedded = false }: { prefs: 
     [languages[i], languages[j]] = [languages[j]!, languages[i]!];
     onChange({ ...prefs, languages });
   };
+  const refused = ALL.filter((l) => !prefs.languages.includes(l));
+  const refuse = (l: LanguageTag) => onChange({ ...prefs, languages: prefs.languages.filter((x) => x !== l) });
+  const accept = (l: LanguageTag) => onChange({ ...prefs, languages: [...prefs.languages, l] });
   const perMinute = Math.round((prefs.maxMovieGb * 1024) / 120);
 
   return (
@@ -34,11 +39,23 @@ export function PreferencesStep({ prefs, onChange, embedded = false }: { prefs: 
               <div className="arrows">
                 <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Monter ${l}`}><ChevronUp className="ic ic-sm" /></button>
                 <button type="button" disabled={i === prefs.languages.length - 1} onClick={() => move(i, 1)} aria-label={`Descendre ${l}`}><ChevronDown className="ic ic-sm" /></button>
+                <button type="button" disabled={prefs.languages.length === 1} onClick={() => refuse(l)}
+                  aria-label={`Refuser ${l}`} title="Refuser cette langue"><X className="ic ic-sm" /></button>
+              </div>
+            </div>
+          ))}
+          {refused.map((l) => (
+            <div className="lang-item refused" key={l}>
+              <span className="lang-rank">—</span>
+              <div className="txt"><b>{LANG_INFO[l].name}</b><span>Refusée : jamais téléchargée</span></div>
+              <div className="arrows">
+                <button type="button" onClick={() => accept(l)} aria-label={`Accepter ${l}`} title="Accepter cette langue"><Plus className="ic ic-sm" /></button>
               </div>
             </div>
           ))}
         </div>
-        <span className="hint-text">Une version qui ne correspond à aucune de ces langues est ignorée. Si une meilleure langue sort plus tard, elle remplace l'ancienne automatiquement.</span>
+        <span className="hint-text">Une version dans une langue refusée ou absente de la liste est ignorée. Si une meilleure langue sort plus tard, elle remplace l'ancienne automatiquement.
+          {' '}Pour n'avoir que du français, refusez la VO.</span>
       </div>
 
       <div className="field">

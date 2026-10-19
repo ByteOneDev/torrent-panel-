@@ -50,6 +50,10 @@ export async function wireProwlarr(api: JsonClient, keys: ProwlarrTargets): Prom
   if (current) await api.put(`/indexerProxy/${current.id}`, proxy);
   else await api.post('/indexerProxy', proxy);
 
+  // Interface de Prowlarr en français.
+  const ui = await api.get<Record<string, unknown> & { id: number; uiLanguage?: string }>('/config/ui');
+  if (ui.uiLanguage !== 'fr') await api.put(`/config/ui/${ui.id}`, { ...ui, uiLanguage: 'fr' });
+
   return `Partagés avec ${done.join(', ')} · FlareSolverr prêt`;
 }
 

@@ -144,3 +144,10 @@ describe('réglages de téléchargement', () => {
     expect(() => toQbt({ ...human, maxDownloadMBps: -1 })).toThrow();
   });
 });
+
+describe('agent : liaison Plex', () => {
+  it('accepte un code Plex valide et refuse le reste', () => {
+    expect(serializeRequest('x', { PLEX_CLAIM: 'claim-AbC_12-x' })).toBe('ID=x\nPLEX_CLAIM=claim-AbC_12-x\n');
+    expect(() => serializeRequest('x', { PLEX_CLAIM: 'pas-un-code' })).toThrow(AgentError);
+  });
+});

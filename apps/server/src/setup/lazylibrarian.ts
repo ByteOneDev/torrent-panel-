@@ -13,6 +13,8 @@ const VALUES: [group: string, name: string, value: string][] = [
   ['General', 'DOWNLOAD_DIR', '/data/torrents/livres'],
   ['General', 'EBOOK_TAB', '1'],
   ['General', 'AUDIO_TAB', '1'],
+  // Livres en français acceptés (par défaut, LazyLibrarian n'accepte que l'anglais).
+  ['General', 'IMP_PREFLANG', 'fr, fre, fra, fr-FR, French, en, eng, en-US, en-GB, English'],
   ['TORRENT', 'TOR_DOWNLOADER_QBITTORRENT', '1'],
   ['TORRENT', 'KEEP_SEEDING', '1'],
   ['QBITTORRENT', 'QBITTORRENT_HOST', 'http://qbittorrent'],

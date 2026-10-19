@@ -42,6 +42,9 @@ services:
       context: ${MOTFLIX_SRC}   # dossier du projet, construit par install.sh / update.sh
     container_name: motflix-panel
     restart: unless-stopped
+    logging:   # journal du panel (ajouts, suppressions, actions) gardé sur quelques Mo
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
     user: ${PUID}:${PGID}   # la base du panel appartient à l'utilisateur, comme le reste
     environment:
       TZ: ${TZ}

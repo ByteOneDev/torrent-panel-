@@ -25,31 +25,32 @@ function errorMessage(status: number, text: string): string {
 }
 
 export interface JsonClient {
-  get<T>(path: string): Promise<T>;
+  get<T>(path: string, timeoutMs?: number): Promise<T>;
   post<T>(path: string, body?: unknown): Promise<T>;
   put<T>(path: string, body?: unknown): Promise<T>;
   del(path: string): Promise<void>;
 }
 
 export function jsonClient(baseUrl: string, headers: Record<string, string> = {}): JsonClient {
-  async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async function call<T>(method: string, path: string, body?: unknown, timeoutMs = TIMEOUT_MS): Promise<T> {
     let res: Response;
     try {
       res = await fetch(baseUrl + path, {
         method,
         headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers },
         body: body !== undefined ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) {
-      throw new ToolError(0, `${new URL(baseUrl).host} ne répond pas (${(e as Error).message})`);
+      const timedOut = (e as Error).name === 'TimeoutError';
+      throw new ToolError(0, `${new URL(baseUrl).host} ${timedOut ? 'met trop de temps à répondre' : `ne répond pas (${(e as Error).message})`}`);
     }
     const text = await res.text();
     if (!res.ok) throw new ToolError(res.status, errorMessage(res.status, text));
     return (text ? JSON.parse(text) : undefined) as T;
   }
   return {
-    get: (p) => call('GET', p),
+    get: (p, t) => call('GET', p, undefined, t),
     post: (p, b) => call('POST', p, b ?? {}),
     put: (p, b) => call('PUT', p, b ?? {}),
     del: async (p) => { await call('DELETE', p); },

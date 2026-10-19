@@ -257,6 +257,8 @@ mkdir_owned "$DATA_DIR"
 for kind in films series livres livres-audio; do
   mkdir -p "$DATA_DIR/torrents/$kind" "$DATA_DIR/media/$kind"
 done
+# Corbeille de Radarr et Sonarr (fichiers supprimés gardés 7 jours).
+mkdir -p "$DATA_DIR/media/.corbeille/films" "$DATA_DIR/media/.corbeille/series"
 mkdir -p "$INSTALL_DIR/logs"
 
 # À partir d'ici, tout est aussi enregistré dans install.log.

@@ -10,6 +10,7 @@ import { AudiobookshelfClient } from './audiobookshelf.ts';
 import { jsonClient } from './http.ts';
 import { wireLazyLibrarian } from './lazylibrarian.ts';
 import { PlexClient } from './plex.ts';
+import { Agent } from './agent.ts';
 import { applyPreferences } from './profiles.ts';
 import { wireProwlarr } from './prowlarr.ts';
 
@@ -34,7 +35,7 @@ export function clients(config: Config) {
 export function buildTasks({ config, settings, services }: JobDeps): TaskDef[] {
   const api = clients(config);
   const qbt = config.qbittorrent;
-  const plex = new PlexClient(settings, config.urls.plex);
+  const plex = new PlexClient(settings, config.urls.plex, new Agent(config.dataDir, config.hostDir));
   const abs = new AudiobookshelfClient(settings, config.urls.audiobookshelf);
   const installed = async (id: string) =>
     (await services.list()).services.some((s) => s.id === id && s.state !== 'missing');

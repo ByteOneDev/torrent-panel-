@@ -8,6 +8,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PlexPin } from '@motflix/shared';
 import type { Settings } from '../settings.ts';
+import type { Agent } from './agent.ts';
 
 const PLEX_TV = 'https://plex.tv';
 const TIMEOUT_MS = 15_000;
@@ -15,10 +16,12 @@ const TIMEOUT_MS = 15_000;
 export class PlexClient {
   private settings: Settings;
   private serverUrl: string;
+  private agent: Agent | null;
 
-  constructor(settings: Settings, serverUrl: string) {
+  constructor(settings: Settings, serverUrl: string, agent: Agent | null = null) {
     this.settings = settings;
     this.serverUrl = serverUrl;
+    this.agent = agent;
   }
 
   private clientId(): string {
@@ -78,7 +81,20 @@ export class PlexClient {
 
   private async claim(token: string): Promise<void> {
     const { token: claimToken } = await this.req<{ token: string }>('GET', `${PLEX_TV}/api/claim/token.json`, token);
-    await this.req('POST', `${this.serverUrl}/myplex/claim?token=${encodeURIComponent(claimToken)}`);
+    try {
+      await this.req('POST', `${this.serverUrl}/myplex/claim?token=${encodeURIComponent(claimToken)}`);
+    } catch (e) {
+      // Plex n'accepte la réclamation que depuis sa propre machine : l'agent hôte s'en charge.
+      if (!this.agent || !/401/.test((e as Error).message)) throw e;
+      const id = this.agent.submit({ PLEX_CLAIM: claimToken });
+      const result = await this.agent.waitFor(id, 60_000);
+      if (!result) {
+        throw new Error(this.agent.installed()
+          ? "L'agent de Motflix n'a pas répondu à temps. Réessayez."
+          : `Pour lier Plex, lancez dans un terminal : ${this.agent.applyCommand()} (puis réessayez).`);
+      }
+      if (!result.ok) throw new Error(result.message);
+    }
     for (let i = 0; i < 20; i++) {
       if ((await this.identity())?.claimed) return;
       await new Promise((r) => setTimeout(r, 1000));

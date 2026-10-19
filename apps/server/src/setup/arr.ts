@@ -64,8 +64,15 @@ export async function ensureNamingAndHardlinks(api: JsonClient, kind: ArrKind): 
   }
   await api.put(`/config/naming/${naming.id}`, naming);
 
+  // Corbeille : un fichier supprimé est gardé 7 jours avant d'être effacé pour de bon
+  // (dossier créé par install.sh ; sans lui, la suppression reste définitive).
   const mm = await api.get<Record<string, unknown> & { id: number }>('/config/mediamanagement');
-  await api.put(`/config/mediamanagement/${mm.id}`, { ...mm, copyUsingHardlinks: true });
+  const bin = `/data/media/.corbeille/${kind === 'radarr' ? 'films' : 'series'}`;
+  try {
+    await api.put(`/config/mediamanagement/${mm.id}`, { ...mm, copyUsingHardlinks: true, recycleBin: bin, recycleBinCleanupDays: 7 });
+  } catch {
+    await api.put(`/config/mediamanagement/${mm.id}`, { ...mm, copyUsingHardlinks: true });
+  }
 }
 
 /** Après chaque import, Radarr / Sonarr demandent à Plex d'actualiser sa bibliothèque. */
@@ -78,9 +85,22 @@ export async function ensurePlexNotification(api: JsonClient, plex: { host: stri
   }));
 }
 
+const FRENCH = 2; // identifiant de la langue « French » dans Radarr et Sonarr
+
+/** Interface d'origine en français ; titres et résumés des films en français (Radarr). */
+export async function ensureFrench(api: JsonClient, kind: ArrKind): Promise<void> {
+  const ui = await api.get<Record<string, unknown> & { id: number; movieInfoLanguage?: number; uiLanguage?: number }>('/config/ui');
+  const wanted = kind === 'radarr' ? { uiLanguage: FRENCH, movieInfoLanguage: FRENCH } : { uiLanguage: FRENCH };
+  if (Object.entries(wanted).every(([k, v]) => ui[k] === v)) return;
+  await api.put(`/config/ui/${ui.id}`, { ...ui, ...wanted });
+  // Les titres déjà en bibliothèque sont rafraîchis pour passer en français.
+  if (kind === 'radarr') await api.post('/command', { name: 'RefreshMovie' });
+}
+
 export async function wireArr(api: JsonClient, kind: ArrKind, qbt: { username: string; password: string }): Promise<string> {
   await ensureRootFolder(api, kind);
   const client = await ensureQbittorrent(api, kind, qbt);
   await ensureNamingAndHardlinks(api, kind);
-  return `${SETTINGS[kind].rootFolder} · qBittorrent ${client} (catégorie « ${SETTINGS[kind].category} ») · renommage et hardlinks`;
+  await ensureFrench(api, kind);
+  return `${SETTINGS[kind].rootFolder} · qBittorrent ${client} (catégorie « ${SETTINGS[kind].category} ») · renommage, hardlinks, corbeille 7 jours · en français`;
 }

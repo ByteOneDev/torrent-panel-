@@ -13,6 +13,7 @@ import type { AgentResult, VpnSettings } from '@motflix/shared';
 const ALLOWED_KEYS = new Set([
   'VPN_ENABLED', 'VPN_PROVIDER', 'VPN_TYPE', 'VPN_COUNTRIES', 'WIREGUARD_PRIVATE_KEY', 'WIREGUARD_ADDRESSES',
   'OPENVPN_USER', 'OPENVPN_PASSWORD', 'VPN_PORT_FORWARDING', 'VPN_PORT_FORWARD_ONLY',
+  'PLEX_CLAIM',
 ]);
 
 /** Fournisseurs proposés (noms Gluetun) et ceux qui savent ouvrir un port. */
@@ -58,6 +59,7 @@ export function serializeRequest(id: string, env: Record<string, string>): strin
   for (const [k, v] of Object.entries(env)) {
     if (!ALLOWED_KEYS.has(k)) throw new AgentError(`Réglage non autorisé : ${k}`);
     if (/['"\n\r\\`$]/.test(v) || v.length > 512) throw new AgentError(`Valeur invalide pour ${k}.`);
+    if (k === 'PLEX_CLAIM' && !/^claim-[A-Za-z0-9_-]+$/.test(v)) throw new AgentError('Code Plex invalide.');
     lines.push(`${k}=${v}`);
   }
   return lines.join('\n') + '\n';
@@ -107,6 +109,17 @@ export class Agent {
     writeFileSync(tmp, serializeRequest(id, env), { mode: 0o600 });
     renameSync(tmp, path.join(this.queue, 'request.env'));
     return id;
+  }
+
+  /** Attend le résultat d'une demande (null si l'agent n'a pas répondu à temps). */
+  async waitFor(id: string, timeoutMs: number): Promise<AgentResult | null> {
+    const end = Date.now() + timeoutMs;
+    while (Date.now() < end) {
+      const r = this.lastResult();
+      if (r?.id === id) return r;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    return null;
   }
 
   lastResult(): AgentResult | null {

@@ -39,3 +39,14 @@ describe('routes de la bibliothèque', () => {
     await app.close();
   });
 });
+
+describe('recherche', () => {
+  it('reconnaît une panne passagère du service de métadonnées', async () => {
+    const { isTransient } = await import('../src/library.ts');
+    const { ToolError } = await import('../src/setup/http.ts');
+    expect(isTransient(new ToolError(400, "Search for 'citizenfour' failed. Invalid response received from RadarrAPI. Resource temporarily unavailable"))).toBe(true);
+    expect(isTransient(new ToolError(0, 'radarr:7878 met trop de temps à répondre'))).toBe(true);
+    expect(isTransient(new ToolError(503, 'Service Unavailable'))).toBe(true);
+    expect(isTransient(new ToolError(400, 'Invalid term'))).toBe(false);
+  });
+});

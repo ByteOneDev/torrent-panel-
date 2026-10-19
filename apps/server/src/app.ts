@@ -14,6 +14,7 @@ import { ServiceError, ServiceManager } from './services.ts';
 import { Settings } from './settings.ts';
 import { registerSetup } from './setup/routes.ts';
 import { serviceAccess } from './access.ts';
+import { createJournal } from './journal.ts';
 import { registerSettings } from './settings-routes.ts';
 import { registerLibrary } from './library-routes.ts';
 
@@ -45,6 +46,7 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
   registerAuth(app, auth, config);
 
   const services = new ServiceManager(docker, config);
+  const journal = createJournal(config.dataDir);
   const dashboard = new Dashboard(config, services);
 
   app.setErrorHandler((err, req, reply) => {
@@ -67,6 +69,7 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
     if (!ACTIONS.includes(action)) return reply.code(404).send({ error: 'Action inconnue.' });
     req.log.info({ service: req.params.id, action, user: req.user?.username }, 'Action sur un service');
     await services.act(req.params.id, action);
+    await journal(`Service ${req.params.id} : ${action}`, req.user?.username);
     return { ok: true };
   });
 

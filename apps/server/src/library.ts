@@ -3,7 +3,7 @@ import type { AddRequest, BookFormat, LibraryItem, LibraryStatus, SearchResult }
 import type { Config } from './config.ts';
 import { clients } from './setup/job.ts';
 import { motflixProfileId } from './setup/profiles.ts';
-import type { JsonClient } from './setup/http.ts';
+import { ToolError, type JsonClient } from './setup/http.ts';
 
 interface ArrImage { coverType: string; remoteUrl?: string; url?: string }
 interface ArrMovie {
@@ -30,9 +30,29 @@ const poster = (images?: ArrImage[], remote?: string) => {
   return url ? url.replace('image.tmdb.org/t/p/original/', 'image.tmdb.org/t/p/w342/') : null;
 };
 
+/** TMDB glisse parfois des marques de direction invisibles (U+200E…) devant les titres. */
+const clean = (s: string) => s.replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, '').trim();
+
 const yearOf = (date?: string | number | null) => {
   const y = Number(String(date ?? '').slice(0, 4));
   return y > 1000 ? y : null;
+};
+
+const SEARCH_TIMEOUT_MS = 20_000;
+const SEARCH_CACHE_MS = 10 * 60_000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Panne passagère d'un service de métadonnées (TMDB via Radarr, TVDB via Sonarr, OpenLibrary). */
+export function isTransient(e: unknown): boolean {
+  if (e instanceof ToolError && (e.status === 0 || e.status >= 500)) return true;
+  return /temporarily unavailable|timed? ?out|trop de temps|RadarrAPI|SkyHook|EAI_AGAIN|ECONN|socket hang up|503|502/i
+    .test((e as Error)?.message ?? '');
+}
+
+const UNAVAILABLE: Record<'movie' | 'series' | 'book', string> = {
+  movie: 'Le service qui fournit les fiches des films (TMDB, via Radarr) ne répond pas pour le moment. Réessayez dans un instant.',
+  series: 'Le service qui fournit les fiches des séries (TVDB, via Sonarr) ne répond pas pour le moment. Réessayez dans un instant.',
+  book: 'OpenLibrary, qui fournit les fiches des livres, ne répond pas pour le moment. Réessayez dans un instant.',
 };
 
 export class LibraryError extends Error {
@@ -47,9 +67,16 @@ export class Library {
   private config: Config;
   private api: ReturnType<typeof clients>;
 
+  private searchCache = new Map<string, { at: number; value: SearchResult[] }>();
+
   constructor(config: Config) {
     this.config = config;
     this.api = clients(config);
+  }
+
+  /** Après un ajout ou un retrait, « Dans la bibliothèque » doit être à jour. */
+  clearSearchCache(): void {
+    this.searchCache.clear();
   }
 
   // ─── LazyLibrarian (API « cmd=… ») ────────────────────────────────────
@@ -69,19 +96,42 @@ export class Library {
 
   // ─── Recherche ────────────────────────────────────────────────────────
 
+  /** Recherche avec cache (10 min) et un nouvel essai si le service de métadonnées flanche. */
   async search(kind: 'movie' | 'series' | 'book', query: string): Promise<SearchResult[]> {
+    const key = `${kind}:${query.toLowerCase()}`;
+    const hit = this.searchCache.get(key);
+    if (hit && Date.now() - hit.at < SEARCH_CACHE_MS) return hit.value;
+    let value: SearchResult[];
+    try {
+      value = await this.searchRemote(kind, query);
+    } catch (e) {
+      if (!isTransient(e)) throw e;
+      await sleep(1500);
+      try {
+        value = await this.searchRemote(kind, query);
+      } catch (e2) {
+        if (isTransient(e2)) throw new LibraryError(503, UNAVAILABLE[kind]);
+        throw e2;
+      }
+    }
+    if (this.searchCache.size > 200) this.searchCache.clear();
+    this.searchCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  private async searchRemote(kind: 'movie' | 'series' | 'book', query: string): Promise<SearchResult[]> {
     const q = encodeURIComponent(query);
     if (kind === 'movie') {
-      const list = await this.api.radarr.get<ArrMovie[]>(`/movie/lookup?term=${q}`);
+      const list = await this.api.radarr.get<ArrMovie[]>(`/movie/lookup?term=${q}`, SEARCH_TIMEOUT_MS);
       return list.slice(0, 30).map((m) => ({
-        kind, key: String(m.tmdbId), title: m.title, year: m.year || null, overview: m.overview ?? '',
+        kind, key: String(m.tmdbId), title: clean(m.title), year: m.year || null, overview: m.overview ?? '',
         poster: poster(m.images, m.remotePoster), subtitle: m.studio ?? null, inLibrary: !!m.id,
       }));
     }
     if (kind === 'series') {
-      const list = await this.api.sonarr.get<ArrSeries[]>(`/series/lookup?term=${q}`);
+      const list = await this.api.sonarr.get<ArrSeries[]>(`/series/lookup?term=${q}`, SEARCH_TIMEOUT_MS);
       return list.slice(0, 30).map((s) => ({
-        kind, key: String(s.tvdbId), title: s.title, year: s.year || null, overview: s.overview ?? '',
+        kind, key: String(s.tvdbId), title: clean(s.title), year: s.year || null, overview: s.overview ?? '',
         poster: poster(s.images, s.remotePoster), subtitle: s.network ?? null, inLibrary: !!s.id,
       }));
     }
@@ -102,9 +152,9 @@ export class Library {
   // ─── Ajout ────────────────────────────────────────────────────────────
 
   async add(req: AddRequest): Promise<string> {
-    if (req.kind === 'movie') return this.addMovie(req);
-    if (req.kind === 'series') return this.addSeries(req);
-    return this.addBook(req);
+    const done = req.kind === 'movie' ? await this.addMovie(req) : req.kind === 'series' ? await this.addSeries(req) : await this.addBook(req);
+    this.clearSearchCache();
+    return done;
   }
 
   private async profileId(api: JsonClient): Promise<number> {
@@ -146,8 +196,22 @@ export class Library {
   private async addBook(req: AddRequest): Promise<string> {
     if (!/^[\w.-]+$/.test(req.key)) throw new LibraryError(400, 'Identifiant invalide.');
     const formats: BookFormat[] = req.formats?.length ? req.formats : ['eBook'];
-    const added = await this.ll<boolean | string>({ cmd: 'addBook', id: req.key, wait: '1' });
-    if (added !== true && added !== 'true' && added !== 'OK') throw new LibraryError(502, `LazyLibrarian : ${String(added).slice(0, 120)}`);
+    // Déjà connu de LazyLibrarian (ajouté puis retiré, par exemple) : pas besoin de le rajouter.
+    const all = await this.ll<LLBook[] | string>({ cmd: 'getAllBooks' });
+    const known = Array.isArray(all) && all.some((b) => b.BookID === req.key);
+    if (!known) {
+      // OpenLibrary flanche parfois : un second essai suffit le plus souvent.
+      let ok = false;
+      for (let attempt = 0; attempt < 2 && !ok; attempt++) {
+        if (attempt) await sleep(2500);
+        const added = await this.ll<boolean | string>({ cmd: 'addBook', id: req.key, wait: '1' });
+        ok = added === true || added === 'true' || added === 'OK';
+      }
+      if (!ok) {
+        throw new LibraryError(502, "Les informations de ce livre n'ont pas pu être récupérées : OpenLibrary ne répond pas "
+          + 'ou ne connaît pas cette édition. Réessayez dans un instant, ou choisissez une autre édition dans les résultats.');
+      }
+    }
     for (const type of formats) {
       await this.ll({ cmd: 'queueBook', id: req.key, type });
       if (req.search) await this.ll({ cmd: 'searchBook', id: req.key, type });
@@ -175,7 +239,7 @@ export class Library {
       const f = m.movieFile;
       const langs = f?.languages?.map((l) => l.name).filter((n) => n && n !== 'Unknown').join(', ');
       return {
-        kind: 'movie', id: String(m.id), title: m.title, year: m.year || null, subtitle: m.studio ?? null,
+        kind: 'movie', id: String(m.id), title: clean(m.title), year: m.year || null, subtitle: m.studio ?? null,
         poster: poster(m.images), overview: m.overview ?? '', status,
         progress: q && q.size > 0 ? 1 - q.sizeleft / q.size : null,
         detail: f ? [f.quality?.quality?.name, langs].filter(Boolean).join(' · ') : statusText(status),
@@ -196,7 +260,7 @@ export class Library {
       const size = q.reduce((a, r) => a + r.size, 0);
       const left = q.reduce((a, r) => a + r.sizeleft, 0);
       return {
-        kind: 'series', id: String(s.id), title: s.title, year: s.year || null, subtitle: s.network ?? null,
+        kind: 'series', id: String(s.id), title: clean(s.title), year: s.year || null, subtitle: s.network ?? null,
         poster: poster(s.images), overview: s.overview ?? '', status,
         progress: size > 0 ? 1 - left / size : null,
         detail: total ? `${have} / ${total} épisodes` : statusText(status),
@@ -231,6 +295,7 @@ export class Library {
   }
 
   async remove(kind: 'movie' | 'series' | 'book', id: string, deleteFiles: boolean, format?: BookFormat): Promise<void> {
+    this.clearSearchCache();
     const flag = deleteFiles ? 'true' : 'false';
     if (kind === 'movie') await this.api.radarr.del(`/movie/${Number(id)}?deleteFiles=${flag}&addImportExclusion=false`);
     else if (kind === 'series') await this.api.sonarr.del(`/series/${Number(id)}?deleteFiles=${flag}&addImportListExclusion=false`);

@@ -6,12 +6,14 @@ import { QbittorrentClient } from './dashboard.ts';
 import { Library, LibraryError } from './library.ts';
 import { ToolError } from './setup/http.ts';
 import { listTorrents, torrentAction, validHashes } from './torrents.ts';
+import { createJournal } from './journal.ts';
 
 const KINDS = new Set(['movie', 'series', 'book']);
 const FORMATS = new Set<BookFormat>(['eBook', 'AudioBook']);
 
 export function registerLibrary(app: FastifyInstance, { config }: { config: Config }) {
   const library = new Library(config);
+  const journal = createJournal(config.dataDir);
   const qbt = new QbittorrentClient(config);
 
   // Erreurs des outils : message lisible plutôt qu'une erreur interne.
@@ -37,9 +39,12 @@ export function registerLibrary(app: FastifyInstance, { config }: { config: Conf
     const b = (req.body ?? {}) as Partial<AddRequest>;
     if (!b.kind || !KINDS.has(b.kind) || typeof b.key !== 'string' || !b.key) return reply.code(400).send({ error: 'Demande invalide.' });
     const formats = Array.isArray(b.formats) ? b.formats.filter((f): f is BookFormat => FORMATS.has(f as BookFormat)) : undefined;
-    return guard(reply, async () => ({
-      detail: await library.add({ kind: b.kind!, key: b.key!, search: b.search !== false, monitor: b.monitor === 'future' ? 'future' : 'all', formats }),
-    }));
+    return guard(reply, async () => {
+      const detail = await library.add({ kind: b.kind!, key: b.key!, search: b.search !== false, monitor: b.monitor === 'future' ? 'future' : 'all', formats });
+      req.log.info({ kind: b.kind, key: b.key, user: req.user?.username }, `Bibliothèque : ajout (${detail})`);
+      await journal(`Ajout ${b.kind} ${b.key} : ${detail}`, req.user?.username);
+      return { detail };
+    });
   });
 
   app.get('/api/library/movies', (_req, reply) => guard<LibraryItem[]>(reply, () => library.movies()));
@@ -71,7 +76,10 @@ export function registerLibrary(app: FastifyInstance, { config }: { config: Conf
       if (!KINDS.has(req.params.kind)) return reply.code(404).send({ error: 'Type inconnu.' });
       const format = req.query.format === 'AudioBook' ? 'AudioBook' : 'eBook';
       return guard(reply, async () => {
-        await library.remove(req.params.kind as 'movie', req.params.id, req.query.deleteFiles === 'true', format);
+        const deleteFiles = req.query.deleteFiles === 'true';
+        await library.remove(req.params.kind as 'movie', req.params.id, deleteFiles, format);
+        req.log.info({ kind: req.params.kind, id: req.params.id, deleteFiles, user: req.user?.username }, 'Bibliothèque : retrait');
+        await journal(`Retrait ${req.params.kind} ${req.params.id}${deleteFiles ? ' avec suppression des fichiers' : ' (fichiers conservés)'}`, req.user?.username);
         return { ok: true };
       });
     });
@@ -87,6 +95,10 @@ export function registerLibrary(app: FastifyInstance, { config }: { config: Conf
       if (action === 'delete' && req.params.hash === 'all') return reply.code(400).send({ error: 'Suppression groupée refusée.' });
       return guard(reply, async () => {
         await torrentAction(qbt, req.params.hash, action, req.query.deleteFiles === 'true');
+        if (action === 'delete') {
+          req.log.info({ hash: req.params.hash, deleteFiles: req.query.deleteFiles === 'true', user: req.user?.username }, 'Téléchargement supprimé');
+          await journal(`Téléchargement ${req.params.hash} supprimé${req.query.deleteFiles === 'true' ? ' avec ses fichiers' : ''}`, req.user?.username);
+        }
         return { ok: true };
       });
     });
