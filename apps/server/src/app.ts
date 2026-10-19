@@ -15,6 +15,7 @@ import { Settings } from './settings.ts';
 import { registerSetup } from './setup/routes.ts';
 import { serviceAccess } from './access.ts';
 import { registerSettings } from './settings-routes.ts';
+import { registerLibrary } from './library-routes.ts';
 
 export interface AppDeps {
   config: Config;
@@ -74,6 +75,7 @@ export async function buildApp({ config, db, docker = new DockerClient(config.do
   const settings = new Settings(db);
   registerSetup(app, { config, settings, services });
   registerSettings(app, { config, settings, services });
+  registerLibrary(app, { config });
 
   app.get<{ Params: { id: string } }>('/api/services/:id/access', async (req, reply) => {
     const access = serviceAccess(req.params.id, config, settings);

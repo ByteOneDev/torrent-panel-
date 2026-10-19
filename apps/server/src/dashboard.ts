@@ -63,12 +63,13 @@ export class QbittorrentClient {
     return (await res.json()) as T;
   }
 
-  async setPreferences(prefs: Record<string, unknown>): Promise<void> {
+  /** POST de formulaire ; renvoie le code HTTP (404 = route absente dans cette version). */
+  async post(path: string, form: Record<string, string>): Promise<number> {
     const doPost = () =>
-      fetch(`${this.config.urls.qbittorrent}/api/v2/app/setPreferences`, {
+      fetch(`${this.config.urls.qbittorrent}${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...(this.sid ? { Cookie: this.sid } : {}) },
-        body: new URLSearchParams({ json: JSON.stringify(prefs) }),
+        body: new URLSearchParams(form),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     let res = await doPost();
@@ -78,7 +79,12 @@ export class QbittorrentClient {
       res = await doPost();
     }
     await res.body?.cancel();
-    if (!res.ok) throw new Error(`qBittorrent a refusé les réglages (${res.status})`);
+    if (!res.ok && res.status !== 404) throw new Error(`qBittorrent a refusé la demande (${res.status})`);
+    return res.status;
+  }
+
+  async setPreferences(prefs: Record<string, unknown>): Promise<void> {
+    await this.post('/api/v2/app/setPreferences', { json: JSON.stringify(prefs) });
   }
 }
 

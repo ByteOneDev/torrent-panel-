@@ -198,6 +198,78 @@ export interface IndexerAddResult {
   message: string;
 }
 
+// ─── Recherche et bibliothèque ───────────────────────────────────────────
+
+export type MediaKind = 'movie' | 'series' | 'book';
+export type BookFormat = 'eBook' | 'AudioBook';
+
+export interface SearchResult {
+  kind: MediaKind;
+  /** tmdbId (film), tvdbId (série) ou identifiant OpenLibrary (livre). */
+  key: string;
+  title: string;
+  year: number | null;
+  overview: string;
+  poster: string | null;
+  /** Auteur (livre), chaîne ou studio (série, film). */
+  subtitle: string | null;
+  inLibrary: boolean;
+}
+
+export type LibraryStatus = 'available' | 'partial' | 'downloading' | 'missing' | 'unreleased';
+
+export interface LibraryItem {
+  kind: MediaKind;
+  /** Identifiant dans l'outil (Radarr, Sonarr) ou BookID (LazyLibrarian). */
+  id: string;
+  title: string;
+  year: number | null;
+  subtitle: string | null;
+  poster: string | null;
+  overview: string;
+  status: LibraryStatus;
+  /** 0..1 pendant un téléchargement. */
+  progress: number | null;
+  /** « WEBDL-1080p · French », « 12 / 24 épisodes »… */
+  detail: string;
+  sizeBytes: number;
+}
+
+export interface AddRequest {
+  kind: MediaKind;
+  key: string;
+  /** Lancer la recherche tout de suite. */
+  search: boolean;
+  /** Séries : tous les épisodes ou seulement les prochains. */
+  monitor?: 'all' | 'future';
+  /** Livres : formats voulus. */
+  formats?: BookFormat[];
+}
+
+export type TorrentAction = 'pause' | 'resume' | 'delete';
+
+export interface Torrent {
+  hash: string;
+  name: string;
+  category: string;
+  sizeBytes: number;
+  progress: number;
+  downloadSpeed: number;
+  uploadSpeed: number;
+  etaSeconds: number | null;
+  ratio: number;
+  state: string;
+  /** Regroupement lisible de l'état de qBittorrent. */
+  phase: 'downloading' | 'waiting' | 'paused' | 'seeding' | 'done' | 'checking' | 'error';
+  addedAt: string;
+}
+
+export interface TorrentsResponse {
+  downloadSpeed: number;
+  uploadSpeed: number;
+  torrents: Torrent[];
+}
+
 // ─── Réglages ────────────────────────────────────────────────────────────
 
 /** Réglages de téléchargement (qBittorrent), en unités humaines. */

@@ -1,0 +1,93 @@
+// Routes : recherche, ajout, bibliothèque et téléchargements.
+import type { FastifyInstance } from 'fastify';
+import type { AddRequest, BookFormat, LibraryItem, SearchResult, TorrentAction, TorrentsResponse } from '@motflix/shared';
+import type { Config } from './config.ts';
+import { QbittorrentClient } from './dashboard.ts';
+import { Library, LibraryError } from './library.ts';
+import { ToolError } from './setup/http.ts';
+import { listTorrents, torrentAction, validHashes } from './torrents.ts';
+
+const KINDS = new Set(['movie', 'series', 'book']);
+const FORMATS = new Set<BookFormat>(['eBook', 'AudioBook']);
+
+export function registerLibrary(app: FastifyInstance, { config }: { config: Config }) {
+  const library = new Library(config);
+  const qbt = new QbittorrentClient(config);
+
+  // Erreurs des outils : message lisible plutôt qu'une erreur interne.
+  const guard = async <T>(reply: { code: (n: number) => { send: (b: unknown) => unknown } }, fn: () => Promise<T>) => {
+    try {
+      return await fn();
+    } catch (e) {
+      if (e instanceof LibraryError) return reply.code(e.status).send({ error: e.message });
+      if (e instanceof ToolError) return reply.code(e.status === 400 || e.status === 409 ? e.status : 502).send({ error: e.message });
+      return reply.code(502).send({ error: (e as Error).message });
+    }
+  };
+
+  app.get<{ Querystring: { q?: string; kind?: string } }>('/api/search', async (req, reply) => {
+    const q = (req.query.q ?? '').trim();
+    const kind = req.query.kind ?? 'movie';
+    if (!KINDS.has(kind)) return reply.code(400).send({ error: 'Type inconnu.' });
+    if (q.length < 2) return [];
+    return guard<SearchResult[]>(reply, () => library.search(kind as 'movie', q.slice(0, 120)));
+  });
+
+  app.post('/api/library', async (req, reply) => {
+    const b = (req.body ?? {}) as Partial<AddRequest>;
+    if (!b.kind || !KINDS.has(b.kind) || typeof b.key !== 'string' || !b.key) return reply.code(400).send({ error: 'Demande invalide.' });
+    const formats = Array.isArray(b.formats) ? b.formats.filter((f): f is BookFormat => FORMATS.has(f as BookFormat)) : undefined;
+    return guard(reply, async () => ({
+      detail: await library.add({ kind: b.kind!, key: b.key!, search: b.search !== false, monitor: b.monitor === 'future' ? 'future' : 'all', formats }),
+    }));
+  });
+
+  app.get('/api/library/movies', (_req, reply) => guard<LibraryItem[]>(reply, () => library.movies()));
+  app.get('/api/library/series', (_req, reply) => guard<LibraryItem[]>(reply, () => library.series()));
+  app.get<{ Querystring: { format?: string } }>('/api/library/books', (req, reply) =>
+    guard<LibraryItem[]>(reply, () => library.books(req.query.format === 'AudioBook' ? 'AudioBook' : 'eBook')));
+
+  app.get<{ Params: { id: string } }>('/api/library/books/:id/cover', async (req, reply) => {
+    try {
+      const res = await library.bookCover(req.params.id);
+      if (!res.ok) return reply.code(404).send({ error: 'Pas de couverture.' });
+      reply.header('Content-Type', res.headers.get('content-type') ?? 'image/jpeg');
+      reply.header('Cache-Control', 'private, max-age=86400');
+      return reply.send(Buffer.from(await res.arrayBuffer()));
+    } catch {
+      return reply.code(404).send({ error: 'Pas de couverture.' });
+    }
+  });
+
+  app.post<{ Params: { kind: string; id: string }; Querystring: { format?: string } }>(
+    '/api/library/:kind/:id/search', async (req, reply) => {
+      if (!KINDS.has(req.params.kind)) return reply.code(404).send({ error: 'Type inconnu.' });
+      const format = req.query.format === 'AudioBook' ? 'AudioBook' : 'eBook';
+      return guard(reply, async () => { await library.searchAgain(req.params.kind as 'movie', req.params.id, format); return { ok: true }; });
+    });
+
+  app.delete<{ Params: { kind: string; id: string }; Querystring: { deleteFiles?: string; format?: string } }>(
+    '/api/library/:kind/:id', async (req, reply) => {
+      if (!KINDS.has(req.params.kind)) return reply.code(404).send({ error: 'Type inconnu.' });
+      const format = req.query.format === 'AudioBook' ? 'AudioBook' : 'eBook';
+      return guard(reply, async () => {
+        await library.remove(req.params.kind as 'movie', req.params.id, req.query.deleteFiles === 'true', format);
+        return { ok: true };
+      });
+    });
+
+  // ─── Téléchargements ───────────────────────────────────────────────────
+  app.get('/api/downloads', (_req, reply) => guard<TorrentsResponse>(reply, () => listTorrents(qbt)));
+
+  app.post<{ Params: { hash: string; action: string }; Querystring: { deleteFiles?: string } }>(
+    '/api/downloads/:hash/:action', async (req, reply) => {
+      const action = req.params.action as TorrentAction;
+      if (!['pause', 'resume', 'delete'].includes(action)) return reply.code(404).send({ error: 'Action inconnue.' });
+      if (!validHashes(req.params.hash)) return reply.code(400).send({ error: 'Torrent invalide.' });
+      if (action === 'delete' && req.params.hash === 'all') return reply.code(400).send({ error: 'Suppression groupée refusée.' });
+      return guard(reply, async () => {
+        await torrentAction(qbt, req.params.hash, action, req.query.deleteFiles === 'true');
+        return { ok: true };
+      });
+    });
+}

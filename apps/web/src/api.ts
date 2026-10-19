@@ -1,5 +1,5 @@
 import type {
-  ApplyResult, AuthState, ConfiguredIndexer, DashboardResponse, DownloadSettings, ServiceAccess, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
+  AddRequest, ApplyResult, AuthState, BookFormat, LibraryItem, MediaKind, SearchResult, TorrentAction, TorrentsResponse, ConfiguredIndexer, DashboardResponse, DownloadSettings, ServiceAccess, IndexerAddResult, IndexerDefinition, MediaPreferences, PlexPin, ServiceAction,
   ServicesResponse, SetupInfo, SetupRun, VpnSettings,
 } from '@motflix/shared';
 
@@ -39,6 +39,23 @@ export const api = {
   serviceAction: (id: string, action: ServiceAction) => call<{ ok: true }>('POST', `/api/services/${id}/${action}`, {}),
   dashboard: () => call<DashboardResponse>('GET', '/api/dashboard'),
   serviceAccess: (id: string) => call<ServiceAccess>('GET', `/api/services/${id}/access`),
+
+  search: (kind: MediaKind, q: string) => call<SearchResult[]>('GET', `/api/search?kind=${kind}&q=${encodeURIComponent(q)}`),
+  library: {
+    add: (r: AddRequest) => call<{ detail: string }>('POST', '/api/library', r),
+    movies: () => call<LibraryItem[]>('GET', '/api/library/movies'),
+    series: () => call<LibraryItem[]>('GET', '/api/library/series'),
+    books: (format: BookFormat) => call<LibraryItem[]>('GET', `/api/library/books?format=${format}`),
+    searchAgain: (kind: MediaKind, id: string, format?: BookFormat) =>
+      call<{ ok: true }>('POST', `/api/library/${kind}/${encodeURIComponent(id)}/search${format ? `?format=${format}` : ''}`, {}),
+    remove: (kind: MediaKind, id: string, deleteFiles: boolean, format?: BookFormat) =>
+      call<{ ok: true }>('DELETE', `/api/library/${kind}/${encodeURIComponent(id)}?deleteFiles=${deleteFiles}${format ? `&format=${format}` : ''}`),
+  },
+  downloads: {
+    list: () => call<TorrentsResponse>('GET', '/api/downloads'),
+    act: (hash: string, action: TorrentAction, deleteFiles = false) =>
+      call<{ ok: true }>('POST', `/api/downloads/${hash}/${action}${action === 'delete' ? `?deleteFiles=${deleteFiles}` : ''}`, {}),
+  },
 
   settings: {
     preferences: () => call<MediaPreferences>('GET', '/api/settings/preferences'),

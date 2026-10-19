@@ -83,7 +83,7 @@ export const useToast = () => useContext(ToastContext);
 
 export function ConfirmDialog(props: {
   title: string; message: string; confirmLabel: string; danger?: boolean;
-  onConfirm: () => void; onCancel: () => void;
+  onConfirm: () => void; onCancel: () => void; children?: ReactNode;
 }) {
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && props.onCancel()}
@@ -92,6 +92,7 @@ export function ConfirmDialog(props: {
         <div className="modal-body">
           <h3>{props.title}</h3>
           <p>{props.message}</p>
+          {props.children}
         </div>
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={props.onCancel}>Annuler</button>

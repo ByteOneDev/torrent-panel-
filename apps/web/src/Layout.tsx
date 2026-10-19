@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  BookOpen, Download, Film, Headphones, LayoutDashboard, LogOut, Menu, Moon, Server, Settings, Shield, Sun, Tv, Wand2,
+  BookOpen, Download, Film, Headphones, LayoutDashboard, LogOut, Menu, Moon, Search, Server, Settings, Shield, Sun, Tv, Wand2,
   type LucideIcon,
 } from 'lucide-react';
 import { api } from './api.ts';
@@ -17,12 +17,13 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     { to: '/services', label: 'Services', icon: Server },
   ] },
   { label: 'Médias', items: [
-    { to: '/films', label: 'Films', icon: Film, soon: true },
-    { to: '/series', label: 'Séries', icon: Tv, soon: true },
-    { to: '/livres', label: 'Livres', icon: BookOpen, soon: true },
-    { to: '/livres-audio', label: 'Livres audio', icon: Headphones, soon: true },
+    { to: '/recherche', label: 'Rechercher', icon: Search },
+    { to: '/films', label: 'Films', icon: Film },
+    { to: '/series', label: 'Séries', icon: Tv },
+    { to: '/livres', label: 'Livres', icon: BookOpen },
+    { to: '/livres-audio', label: 'Livres audio', icon: Headphones },
   ] },
-  { label: 'Activité', items: [{ to: '/telechargements', label: 'Téléchargements', icon: Download, soon: true }] },
+  { label: 'Activité', items: [{ to: '/telechargements', label: 'Téléchargements', icon: Download }] },
   { label: 'Configuration', items: [
     { to: '/reglages', label: 'Réglages', icon: Settings },
     { to: '/assistant', label: 'Assistant', icon: Wand2 },
@@ -134,7 +135,17 @@ export function Layout({ title, children }: { title: string; children: ReactNode
             <Menu className="ic" />
           </button>
           <h1>{title}</h1>
-          <div className="right"><VpnBadge /></div>
+          {location.pathname !== '/recherche' && (
+            <form className="top-search" role="search" onSubmit={(e) => {
+              e.preventDefault();
+              const q = new FormData(e.currentTarget).get('q')?.toString().trim();
+              if (q) navigate(`/recherche?kind=movie&q=${encodeURIComponent(q)}`);
+            }}>
+              <Search className="ic ic-sm dim" />
+              <input name="q" placeholder="Rechercher un film, une série, un livre…" aria-label="Rechercher" />
+            </form>
+          )}
+          <div className="right" style={location.pathname !== '/recherche' ? { marginLeft: 0 } : undefined}><VpnBadge /></div>
         </header>
         <main className="content" key={location.pathname}>{children}</main>
       </div>

@@ -9,6 +9,9 @@ import { DashboardPage } from './pages/DashboardPage.tsx';
 import { ServicesPage } from './pages/ServicesPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { WizardPage } from './pages/WizardPage.tsx';
+import { DownloadsPage } from './pages/DownloadsPage.tsx';
+import { LibraryPage } from './pages/LibraryPage.tsx';
+import { SearchPage } from './pages/SearchPage.tsx';
 import { ToastProvider } from './ui.tsx';
 import './styles.css';
 
@@ -55,6 +58,12 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<Gate><DashboardPage /></Gate>} />
             <Route path="/services" element={<Gate><ServicesPage /></Gate>} />
             <Route path="/services/:id" element={<Gate><ServicesPage /></Gate>} />
+            <Route path="/recherche" element={<Gate><SearchPage /></Gate>} />
+            <Route path="/films" element={<Gate><LibraryPage key="films" kind="movie" title="Films" /></Gate>} />
+            <Route path="/series" element={<Gate><LibraryPage key="series" kind="series" title="Séries" /></Gate>} />
+            <Route path="/livres" element={<Gate><LibraryPage key="livres" kind="book" format="eBook" title="Livres" /></Gate>} />
+            <Route path="/livres-audio" element={<Gate><LibraryPage key="audio" kind="book" format="AudioBook" title="Livres audio" /></Gate>} />
+            <Route path="/telechargements" element={<Gate><DownloadsPage /></Gate>} />
             <Route path="/reglages" element={<Navigate to="/reglages/langue" replace />} />
             <Route path="/reglages/:section" element={<Gate><SettingsPage /></Gate>} />
             <Route path="*" element={<Navigate to="/" replace />} />

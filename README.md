@@ -6,9 +6,9 @@ Panel d'administration web qui réunit les outils de téléchargement et de gest
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Maquette : [docs/maquette/index.html](docs/maquette/index.html)
 
-**État : phase 3** — la stack s'installe et démarre seule ; au premier accès, un assistant relie tous les outils
-entre eux. Ensuite, tout se règle depuis le panel (langue, qualité, téléchargements, partage, VPN, sites, Plex,
-comptes), sans ouvrir les outils. La recherche et la bibliothèque arrivent en phase 4.
+**État : phase 4** — la stack s'installe et démarre seule ; un assistant relie tous les outils au premier accès.
+Depuis le panel : chercher et ajouter des films, séries et livres, parcourir la bibliothèque, suivre et gérer les
+téléchargements, et tout régler (langue, qualité, partage, VPN, sites, Plex, comptes) sans ouvrir les outils.
 
 ---
 
@@ -104,6 +104,9 @@ Le panel s'ouvre directement, sans mot de passe. Pour en exiger un, activez les 
 | Page | Contenu |
 |---|---|
 | Tableau de bord | Téléchargements, stockage, VPN, bibliothèque, état de chaque service, activité récente |
+| Rechercher | Films, séries et livres (barre du haut) ; « Ajouter » selon vos préférences, avec ou sans recherche immédiate |
+| Films, Séries, Livres, Livres audio | Affiches, filtres (disponibles, en téléchargement, recherchés), fiche avec « Rechercher à nouveau » et « Retirer » |
+| Téléchargements | Vitesses, progression, temps restant, pause / reprise / suppression, « Tout mettre en pause » |
 | Services | Détail d'un service : démarrer / redémarrer / arrêter, CPU et mémoire, console de logs en direct, et les identifiants de son interface d'origine |
 | Réglages | Langue et qualité, téléchargements (vitesse, plage horaire, partage), VPN, sites d'indexation, Plex, comptes, mode avancé |
 
